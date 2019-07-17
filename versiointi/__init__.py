@@ -22,7 +22,7 @@ def vaatimukset(setup_py):
   # def vaatimukset
 
 
-def asennustiedot(setup_py):
+def asennustiedot(setup_py, **kwargs):
   '''
   Palauta `setup()`-kutsulle annettavat lisäparametrit.
   '''
@@ -47,8 +47,8 @@ def asennustiedot(setup_py):
     # Ota hakemiston nimi.
     polku = os.path.dirname(setup_py)
     param.update(dict(
-      version=git_versio(polku),
-      historia=list(git_historia(polku)),
+      version=git_versio(polku, **kwargs),
+      historia=list(git_historia(polku, **kwargs)),
     ))
   except ValueError:
     warnings.warn('git-tietovarastoa ei löytynyt', RuntimeWarning)

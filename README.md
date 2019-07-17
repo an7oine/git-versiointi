@@ -36,12 +36,22 @@ Skripti palauttaa `setup()`-kutsua varten seuraavat parametrit:
 * `historia`: JSON-data, joka sisältää projektin git-versiohistorian
 * `install_requires`: asennuksen vaatimat riippuvuudet
 
-## Versionumeron muodostus
+## Versionumeron muodostus (oletus)
 
 Versionumero muodostetaan `.git`-hakemiston sisältämien tietojen mukaan:
 * viimeisin leima (`git-tag`), josta poistetaan alusta mahdollinen `v`
 * mikäli leiman päälle on tehty muutoksia, näiden lukumäärä lisätään alanumerona versionumeron perään:
   - esim. `v1.2` + 3 muutosta --> versionumero `1.2.3`
+
+## Räätälöity versionumeron muodostus
+
+Leimattu versio saa versionumerokseen leiman, josta poistetaan alusta mahdollinen `v`. Aliversiot voidaan versioida halutun käytännön mukaisesti antamalla `asennustiedot()`-kutsulle nimettyinä parametreinä `versio` ja/tai `aliversio`. Nämä voivat olla joko:
+* merkkijono, johon interpoloidaan ajonaikaisesti alla olevat muuttujat; tai
+* funktio (sulkeuma), jolle annetaan nimettyinä parametreinä alla olevat muuttujat ja jonka tulee palauttaa haluttu versionumero merkkijonona.
+
+Käytettävissä ovat seuraavat muuttujat:
+* `leima`: viimeisin leima
+* `etaisyys`: muutosten lukumäärä viimeisimmän leiman jälkeen (`> 0`)
 
 ## Historiatiedot
 
