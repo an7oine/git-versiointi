@@ -10,6 +10,12 @@ VERSIO = re.compile(r'^v[0-9]', flags=re.IGNORECASE)
 KEHITYSVERSIO = re.compile(r'(.+[a-z])([0-9]*)$', flags=re.IGNORECASE)
 
 
+def _normalisoi(versio):
+  try:
+    return str(pkg_resources.packaging.version.Version(versio))
+  except pkg_resources.packaging.version.InvalidVersion:
+    return versio
+
 
 def _muotoile_versio(leima, etaisyys, versio=None, aliversio=None):
   '''
@@ -26,7 +32,7 @@ def _muotoile_versio(leima, etaisyys, versio=None, aliversio=None):
     if kehitysversio:
       if kehitysversio.group(2):
         etaisyys += int(kehitysversio.group(2))
-      return f'{kehitysversio.group(1)}{etaisyys}'
+      return _normalisoi(f'{kehitysversio.group(1)}{etaisyys}')
 
   if not callable(versio):
     assert not versio or isinstance(versio, str)
@@ -35,10 +41,10 @@ def _muotoile_versio(leima, etaisyys, versio=None, aliversio=None):
     assert not aliversio or isinstance(aliversio, str)
     aliversio = (aliversio or '{leima}.{etaisyys}').format
 
-  return (aliversio if etaisyys else versio)(
+  return _normalisoi((aliversio if etaisyys else versio)(
     leima=leima or 'v0.0',
     etaisyys=etaisyys,
-  )
+  ))
   # def _muotoile_versio
 
 
@@ -196,7 +202,7 @@ def git_versio(polku, versio=None, aliversio=None):
   try:
     ref = repo.head.commit
   except ValueError:
-    return 'v0'
+    return _normalisoi('v0')
 
   # Jos HEAD osoittaa suoraan johonkin julkaisuun, palauta se.
   leima = git_leima(repo, ref, kehitysversio=False)
