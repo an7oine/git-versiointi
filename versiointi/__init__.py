@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import configparser
 from datetime import datetime
 import os
 import re
 import warnings
+
+from .repo import git_versio, git_historia
 
 
 def vaatimukset(setup_py):
@@ -41,11 +44,22 @@ def asennustiedot(setup_py, **kwargs):
       )
       for rivi in requirements
     ]
+    # if requirements
 
+  # Ota hakemiston nimi.
+  polku = os.path.dirname(setup_py)
+
+  # Lataa oletusparametrit `setup.cfg`-tiedostosta, jos on.
+  c = configparser.ConfigParser()
+  c.read(os.path.join(polku, 'setup.cfg'))
+  if c.has_section('versiointi'):
+    kwargs = {
+      **kwargs,
+      **dict(c['versiointi']),
+    }
+
+  # Muodosta versionumero ja git-historia.
   try:
-    from .repo import git_versio, git_historia
-    # Ota hakemiston nimi.
-    polku = os.path.dirname(setup_py)
     param.update(dict(
       version=git_versio(polku, **kwargs),
       historia=list(git_historia(polku, **kwargs)),
