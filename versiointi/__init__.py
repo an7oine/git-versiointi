@@ -4,6 +4,7 @@ import configparser
 from datetime import datetime
 import os
 import re
+import sys
 import warnings
 
 from .repo import git_versio, git_historia
@@ -57,6 +58,14 @@ def asennustiedot(setup_py, **kwargs):
       **kwargs,
       **dict(c['versiointi']),
     }
+
+  try:
+    ref_i = sys.argv.index('--ref', 0, -1)
+  except ValueError:
+    pass
+  else:
+    kwargs['ref'] = sys.argv[ref_i + 1]
+    sys.argv[ref_i:ref_i+2] = []
 
   # Muodosta versionumero ja git-historia.
   try:

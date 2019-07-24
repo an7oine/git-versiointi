@@ -4,6 +4,8 @@ import pkg_resources
 import re
 
 from git.exc import InvalidGitRepositoryError
+from git.objects.commit import Commit
+from git.objects.tag import TagObject
 from git import Repo
 
 VERSIO = re.compile(r'^v[0-9]', flags=re.IGNORECASE)
@@ -48,6 +50,19 @@ def _muotoile_versio(leima, etaisyys, versio=None, aliversio=None):
   # def _muotoile_versio
 
 
+def git_muutos(repo, ref):
+  '''
+  Etsitään ja palautetaan annetun git-objektin osoittama muutos (git-commit).
+  '''
+  if isinstance(ref, Commit):
+    return ref
+  elif isinstance(ref, TagObject):
+    return git_muutos(repo, ref.object)
+  else:
+    return git_muutos(repo, ref.commit)
+  # def git_muutos
+
+
 def git_leima(repo, ref, kehitysversio=False):
   '''
   Etsitään ja palautetaan versiojärjestyksessä viimeisin viittaukseen osoittava leima.
@@ -70,11 +85,12 @@ def git_leima(repo, ref, kehitysversio=False):
   # def git_leima
 
 
-def git_historia(polku, versio=None, aliversio=None):
+def git_historia(polku, ref=None, versio=None, aliversio=None):
   '''
   Muodosta versiohistoria git-tietovaraston sisällön mukaan.
   Args:
     polku (str): `.git`-alihakemiston sisältävä polku
+    ref (str): git-viittaus (oletus HEAD)
     versio (str): version numerointi
     aliversio (str): aliversion numerointi
   Yields:
@@ -87,9 +103,18 @@ def git_historia(polku, versio=None, aliversio=None):
   except InvalidGitRepositoryError:
     raise ValueError(f'Virheellinen polku: {polku}')
 
+  # Aloita annetusta viittauksesta tai HEAD-osoittimesta.
+  try:
+    aloitus_ref = (
+      git_muutos(repo, repo.rev_parse(ref)) if ref
+      else repo.head.commit
+    )
+  except ValueError:
+    return
+
   def muutokset():
-    yield repo.head.commit
-    yield from repo.head.commit.iter_parents()
+    yield aloitus_ref
+    yield from aloitus_ref.iter_parents()
 
   leima, etaisyys = None, 0
   for ref in muutokset():
@@ -183,11 +208,12 @@ def git_historia(polku, versio=None, aliversio=None):
   # def git_historia
 
 
-def git_versio(polku, versio=None, aliversio=None):
+def git_versio(polku, ref=None, versio=None, aliversio=None):
   '''
   Muodosta versionumero git-tietovaraston leimojen mukaan.
   Args:
     polku (str): `.git`-alihakemiston sisältävä polku
+    ref (str): git-viittaus (oletus HEAD)
     versio (str): version numerointi
     aliversio (str): aliversion numerointi
   Returns:
@@ -198,13 +224,16 @@ def git_versio(polku, versio=None, aliversio=None):
   except InvalidGitRepositoryError:
     raise ValueError(f'Virheellinen polku: {polku}')
 
-  # Aloita HEAD-viittauksesta.
+  # Aloita annetusta viittauksesta tai HEAD-osoittimesta.
   try:
-    ref = repo.head.commit
+    ref = (
+      git_muutos(repo, repo.rev_parse(ref)) if ref
+      else repo.head.commit
+    )
   except ValueError:
     return _normalisoi('v0')
 
-  # Jos HEAD osoittaa suoraan johonkin julkaisuun, palauta se.
+  # Jos viittaus osoittaa suoraan johonkin julkaisuun, palauta se.
   leima = git_leima(repo, ref, kehitysversio=False)
   if leima:
     return _muotoile_versio(
@@ -212,7 +241,7 @@ def git_versio(polku, versio=None, aliversio=None):
       versio=versio, aliversio=aliversio,
     )
 
-  # Jos HEAD osoittaa suoraan johonkin kehitysversioon, palauta se.
+  # Jos viittaus osoittaa suoraan johonkin kehitysversioon, palauta se.
   leima = git_leima(repo, ref, kehitysversio=True)
   if leima:
     return _muotoile_versio(
