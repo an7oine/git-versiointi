@@ -36,12 +36,24 @@ def _muotoile_versio(leima, etaisyys, versio=None, aliversio=None):
         etaisyys += int(kehitysversio.group(2))
       return _normalisoi(f'{kehitysversio.group(1)}{etaisyys}')
 
+  def muotoilija(aihio):
+    def muotoilija(**kwargs):
+      exec(f'tulos = f"{aihio}"', kwargs)
+      return kwargs['tulos']
+    return muotoilija
+
   if not callable(versio):
     assert not versio or isinstance(versio, str)
-    versio = (versio or '{leima}').format
+    versio = (
+      muotoilija(versio) if versio
+      else '{leima}'.format
+    )
   if not callable(aliversio):
     assert not aliversio or isinstance(aliversio, str)
-    aliversio = (aliversio or '{leima}.{etaisyys}').format
+    aliversio = (
+      muotoilija(aliversio) if aliversio
+      else '{leima}.{etaisyys}'.format
+    )
 
   return _normalisoi((aliversio if etaisyys else versio)(
     leima=leima or 'v0.0',
