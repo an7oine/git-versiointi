@@ -71,7 +71,7 @@ def asennustiedot(setup_py, **kwargs):
   try:
     param.update(dict(
       version=git_versio(polku, **kwargs),
-      historia=list(git_historia(polku, **kwargs)),
+      historia=git_historia(polku, **kwargs),
     ))
   except ValueError:
     warnings.warn('git-tietovarastoa ei löytynyt', RuntimeWarning)
