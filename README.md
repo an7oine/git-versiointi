@@ -33,8 +33,10 @@ Kun pakettia asennetaan joko työasemalla (`python setup.py develop`) tai palvel
 
 Git-versiointia käyttävän paketin versionumero voidaan poimia komentoriviltä seuraavasti:
 ```bash
-python <paketti>/setup.py --version
+python <paketti>/setup.py --version [--ref XXX]
 ```
+
+Python-kutsulle voidaan antaa parametri `--ref XXX`, missä `XXX` on git-muutoksen tiiviste, haaran tai leiman nimi tms. Tällöin palautetaan versionumero kyseisen muutoksen kohdalla. Mikäli paketin (ali-) versiointikäytäntö on muuttunut annetun revision ja nykyisen tilanteen (`HEAD`) välillä, saattaa ilmoitettu versionumero poiketa historiallisesta, kyseisellä hetkellä silloisen käytännön mukaisesti lasketusta.
 
 # Toimintaperiaate
 
