@@ -7,7 +7,7 @@ import re
 import sys
 import warnings
 
-from .repo import git_versio, git_historia
+from .repo import git_historia, git_revisio, git_versio
 
 
 def vaatimukset(setup_py):
@@ -30,6 +30,8 @@ def asennustiedot(setup_py, **kwargs):
   '''
   Palauta `setup()`-kutsulle annettavat lisäparametrit.
   '''
+  import distutils
+
   # Muodosta setup()-parametrit.
   param = {}
 
@@ -59,6 +61,7 @@ def asennustiedot(setup_py, **kwargs):
       **dict(c['versiointi']),
     }
 
+  # Poimi mahdollinen `--ref`-parametri komentoriviltä.
   try:
     ref_i = sys.argv.index('--ref', 0, -1)
   except ValueError:
@@ -66,6 +69,32 @@ def asennustiedot(setup_py, **kwargs):
   else:
     kwargs['ref'] = sys.argv[ref_i + 1]
     sys.argv[ref_i:ref_i+2] = []
+
+  # Poimi ja tulosta annettuun versioon liittyvä
+  # git-revisio `--ref`-parametrillä.
+  oletus_hdo = distutils.dist.Distribution.handle_display_options
+  def handle_display_options(self, option_order):
+    option_order_muutettu = []
+    muutettu = False
+    for (opt, val) in option_order:
+      if opt == 'ref':
+        ref = git_revisio(polku, val, **kwargs)
+        if ref is None:
+          raise distutils.errors.DistutilsOptionError(
+            f'versiota {val} vastaavaa git-revisiota ei löydy'
+          )
+        print(ref)
+        muutettu = True
+      else:
+        option_order_muutettu.append((opt, val))
+    return oletus_hdo(
+      self, option_order_muutettu if muutettu else option_order
+    ) or muutettu
+    # def handle_display_options
+  distutils.dist.Distribution.handle_display_options = handle_display_options
+  distutils.dist.Distribution.display_options += [
+    ('ref=', None, 'tulosta annettua versiota vastaava git-revisio')
+  ]
 
   # Muodosta versionumero ja git-historia.
   try:
