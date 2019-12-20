@@ -60,6 +60,20 @@ class Tietovarasto(Repo):
     return itertools.chain((ref, ), ref.iter_parents())
     # def muutokset
 
+  def oksa(self, ref=None):
+    ref = self.muutos(ref)
+    try:
+      master, = self.merge_base('master', ref)
+    except: # pylint: disable=bare-except
+      return None, None
+    oksa = 0
+    for muutos in self.muutokset(ref):
+      if muutos == master:
+        return master, oksa
+      oksa += 1
+    raise RuntimeError
+    # def oksa
+
   def muutosloki(self, ref=None):
     '''
     Tuota git-tietovaraston muutosloki alkaen annetusta muutoksesta.

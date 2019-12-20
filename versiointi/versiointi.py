@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import warnings
+import itertools
 
 import pkg_resources
 
@@ -13,9 +14,11 @@ class Versiointi:
     versio (callable / str): version numerointi, oletus `"{leima}"`
     aliversio (callable / str): aliversion numerointi,
       oletus `"{leima}.{etaisyys}"`
+    oksaversio (callable / str): oksaversion numerointi,
+      oletus `"{master}+{haara}.{oksa}"`
   '''
   def __init__(
-    self, polku, versio=None, aliversio=None, **kwargs
+    self, polku, versio=None, aliversio=None, oksaversio=None, **kwargs
   ):
     if kwargs:
       warnings.warn(
@@ -48,6 +51,19 @@ class Versiointi:
         '{leima}.{etaisyys}'.format if not aliversio
         else muotoilija(aliversio)
       )
+
+    if callable(oksaversio):
+      self.oksaversio = oksaversio
+    else:
+      # Huom. asetetaan `None`,
+      # mikäli oksaversiona on annettu tyhjä merkkijono.
+      # Tällöin oksat versioidaan kuten master-haara.
+      assert oksaversio is None or isinstance(oksaversio, str)
+      self.oksaversio = (
+        '{master}+{haara}.{oksa}'.format if oksaversio is None
+        else None if not oksaversio
+        else muotoilija(oksaversio)
+      )
     # def __init__
 
 
@@ -61,7 +77,7 @@ class Versiointi:
       return versio
     # def _normalisoi
 
-  def _muotoile(self, leima, etaisyys):
+  def _muotoile(self, leima=None, etaisyys=0, oksa=None):
     '''
     Määritä versionumero käytännön mukaisesti
     versiolle, kehitysversiolle ja aliversiolle.
@@ -70,6 +86,9 @@ class Versiointi:
       leima (git.Tag): lähin git-leima (tag)
       etaisyys (int): muutosten lukumäärä leiman jälkeen
     '''
+    if oksa is not None and self.oksaversio is not None:
+      return self._normalisoi(self.oksaversio(**oksa))
+
     if leima is not None:
       kehitysversio = self.tietovarasto.KEHITYSVERSIO.match(str(leima))
       if kehitysversio:
@@ -83,6 +102,23 @@ class Versiointi:
     ))
     # def _muotoile
 
+  def _oksan_tiedot(self, ref=None):
+    master, oksa = self.tietovarasto.oksa(ref)
+    if not oksa:
+      return itertools.repeat(None)
+    param = {'master': self.versionumero(master)}
+    for haara in self.tietovarasto.branches:
+      if self.tietovarasto.muutos(ref) in self.tietovarasto.muutokset(haara):
+        param['haara'] = haara
+        break
+    else:
+      return itertools.repeat(None)
+    return itertools.chain(
+      ({'oksa': oksa, **param} for oksa in range(oksa, 0, -1)),
+      itertools.repeat(None)
+    )
+    # def _oksan_tiedot
+
 
   # ULKOISET METODIT
 
@@ -94,6 +130,8 @@ class Versiointi:
     Returns:
       versionumero (str): esim. '1.0.2'
     '''
+    oksa = next(self._oksan_tiedot(ref))
+
     # Jos viittaus osoittaa suoraan johonkin
     # julkaisuun tai kehitysversioon, palauta se.
     leima = (
@@ -101,7 +139,7 @@ class Versiointi:
       or self.tietovarasto.leima(ref, kehitysversio=True)
     )
     if leima:
-      return self._muotoile(leima=leima, etaisyys=0)
+      return self._muotoile(leima=leima, etaisyys=0, oksa=oksa)
 
     ref = self.tietovarasto.muutos(ref)
 
@@ -112,12 +150,12 @@ class Versiointi:
     for ref in ref.iter_parents():
       leima = self.tietovarasto.leima(ref, kehitysversio=True)
       if leima:
-        return self._muotoile(leima=leima, etaisyys=etaisyys)
+        return self._muotoile(leima=leima, etaisyys=etaisyys, oksa=oksa)
       etaisyys += 1
 
     # Jos yhtään aiempaa versiomerkintää ei löytynyt,
     # muodosta versionumero git-historian pituuden mukaan.
-    return self._muotoile(leima=None, etaisyys=etaisyys)
+    return self._muotoile(leima=None, etaisyys=etaisyys, oksa=oksa)
     # def versionumero
 
   def historia(self, ref=None):
@@ -133,19 +171,25 @@ class Versiointi:
         ``('1.0.1', 'Lisätty uusi toiminnallisuus X')``, ...
     '''
     # pylint: disable=redefined-argument-from-local
+    # pylint: disable=stop-iteration-return
+    oksan_tiedot = self._oksan_tiedot(ref)
     for ref, leima, etaisyys in self.tietovarasto.muutosloki(ref):
       if getattr(leima, 'object', None) == ref and not etaisyys:
         yield {
           'tyyppi': 'julkaisu',
           'tunnus': ref.hexsha,
-          'versio': self._muotoile(leima=leima, etaisyys=0),
+          'versio': self._muotoile(
+            leima=leima, etaisyys=0, oksa=next(oksan_tiedot),
+          ),
           'kuvaus': getattr(leima.tag, 'message', '').rstrip('\n'),
         }
       else:
         yield {
           'tyyppi': 'muutos',
           'tunnus': ref.hexsha,
-          'versio': self._muotoile(leima=leima, etaisyys=etaisyys),
+          'versio': self._muotoile(
+            leima=leima, etaisyys=etaisyys, oksa=next(oksan_tiedot),
+          ),
           'kuvaus': ref.message.rstrip('\n'),
         }
       # for muutos in _git_historia
