@@ -7,7 +7,7 @@ import re
 import sys
 import warnings
 
-from .repo import git_historia, git_revisio, git_versio
+from .versiointi import Versiointi
 
 
 def vaatimukset(setup_py):
@@ -53,21 +53,21 @@ def asennustiedot(setup_py, **kwargs):
   polku = os.path.dirname(setup_py)
 
   # Lataa oletusparametrit `setup.cfg`-tiedostosta, jos on.
-  c = configparser.ConfigParser()
-  c.read(os.path.join(polku, 'setup.cfg'))
-  if c.has_section('versiointi'):
-    kwargs = {
-      **kwargs,
-      **dict(c['versiointi']),
-    }
+  parametrit = configparser.ConfigParser()
+  parametrit.read(os.path.join(polku, 'setup.cfg'))
+  if parametrit.has_section('versiointi'):
+    kwargs.update(dict(parametrit['versiointi']))
+
+  # Alusta versiointiolio.
+  versiointi = Versiointi(polku, **kwargs)
 
   # Poimi mahdollinen `--ref`-parametri komentoriviltä.
   try:
     ref_i = sys.argv.index('--ref', 0, -1)
   except ValueError:
-    pass
+    ref = None
   else:
-    kwargs['ref'] = sys.argv[ref_i + 1]
+    ref = sys.argv[ref_i + 1]
     sys.argv[ref_i:ref_i+2] = []
 
   # Poimi ja tulosta annettuun versioon liittyvä
@@ -78,12 +78,13 @@ def asennustiedot(setup_py, **kwargs):
     muutettu = False
     for (opt, val) in option_order:
       if opt == 'ref':
-        ref = git_revisio(polku, val, **kwargs)
-        if ref is None:
+        revisio = versiointi.revisio(val, ref=ref)
+        if revisio is None:
+          # pylint: disable=no-member
           raise distutils.errors.DistutilsOptionError(
             f'versiota {val} vastaavaa git-revisiota ei löydy'
           )
-        print(ref)
+        print(revisio)
         muutettu = True
       else:
         option_order_muutettu.append((opt, val))
@@ -99,8 +100,8 @@ def asennustiedot(setup_py, **kwargs):
   # Muodosta versionumero ja git-historia.
   try:
     param.update(dict(
-      version=git_versio(polku, **kwargs),
-      historia=git_historia(polku, **kwargs),
+      version=versiointi.versionumero(ref=ref),
+      historia=versiointi.historia(ref=ref),
     ))
   except ValueError:
     warnings.warn('git-tietovarastoa ei löytynyt', RuntimeWarning)
