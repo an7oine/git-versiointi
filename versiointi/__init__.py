@@ -2,6 +2,7 @@
 
 import configparser
 from datetime import datetime
+import itertools
 import os
 import re
 import sys
@@ -86,6 +87,12 @@ def asennustiedot(setup_py, **kwargs):
           )
         print(revisio)
         muutettu = True
+      elif opt == 'historia':
+        for versio in itertools.islice(
+          versiointi.historia(ref=ref), 0, int(val)
+        ):
+          print(versio)
+        muutettu = True
       else:
         option_order_muutettu.append((opt, val))
     return oletus_hdo(
@@ -94,7 +101,8 @@ def asennustiedot(setup_py, **kwargs):
     # def handle_display_options
   distutils.dist.Distribution.handle_display_options = handle_display_options
   distutils.dist.Distribution.display_options += [
-    ('ref=', None, 'tulosta annettua versiota vastaava git-revisio')
+    ('historia=', None, 'tulosta annetun pituinen versiohistoria'),
+    ('ref=', None, 'tulosta annettua versiota vastaava git-revisio'),
   ]
 
   # Muodosta versionumero ja git-historia.
