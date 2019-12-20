@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import warnings
+
 import pkg_resources
 
 from .repo import Tietovarasto
@@ -12,8 +14,14 @@ class Versiointi:
     aliversio (callable / str): aliversion numerointi,
       oletus `"{leima}.{etaisyys}"`
   '''
+  def __init__(
+    self, polku, versio=None, aliversio=None, **kwargs
+  ):
+    if kwargs:
+      warnings.warn(
+        f'Tuntemattomat versiointiparametrit: {kwargs!r}', stacklevel=3
+      )
 
-  def __init__(self, polku, versio=None, aliversio=None):
     super().__init__()
     self.tietovarasto = Tietovarasto(polku)
     def muotoilija(aihio):
@@ -23,17 +31,22 @@ class Versiointi:
         return kwargs['tulos']
       return muotoilija
 
-    if not callable(versio):
-      assert not versio or isinstance(versio, str)
+    if callable(versio):
+      self.versio = versio
+    else:
+      assert versio is None or isinstance(versio, str)
       self.versio = (
-        muotoilija(versio) if versio
-        else '{leima}'.format
+        '{leima}'.format if not versio
+        else muotoilija(versio)
       )
-    if not callable(aliversio):
-      assert not aliversio or isinstance(aliversio, str)
+
+    if callable(aliversio):
+      self.aliversio = aliversio
+    else:
+      assert aliversio is None or isinstance(aliversio, str)
       self.aliversio = (
-        muotoilija(aliversio) if aliversio
-        else '{leima}.{etaisyys}'.format
+        '{leima}.{etaisyys}'.format if not aliversio
+        else muotoilija(aliversio)
       )
     # def __init__
 
