@@ -26,7 +26,12 @@ class Versiointi:
       )
 
     super().__init__()
-    self.tietovarasto = Tietovarasto(polku)
+
+    try:
+      self.tietovarasto = Tietovarasto(polku)
+    except:
+      raise ValueError(f'Git-tietovarastoa ei voitu avata polussa {polku!r}')
+
     def muotoilija(aihio):
       def muotoilija(**kwargs):
         # pylint: disable=exec-used

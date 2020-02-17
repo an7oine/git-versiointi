@@ -60,7 +60,11 @@ def asennustiedot(setup_py, **kwargs):
     kwargs.update(dict(parametrit['versiointi']))
 
   # Alusta versiointiolio.
-  versiointi = Versiointi(polku, **kwargs)
+  try:
+    versiointi = Versiointi(polku, **kwargs)
+  except ValueError:
+    warnings.warn('git-tietovarastoa ei löytynyt', RuntimeWarning)
+    return {'version': datetime.now().strftime('%Y%m%d.%H%M%s')}
 
   # Poimi mahdollinen `--ref`-parametri komentoriviltä.
   try:
@@ -106,13 +110,9 @@ def asennustiedot(setup_py, **kwargs):
   ]
 
   # Muodosta versionumero ja git-historia.
-  try:
-    param.update(dict(
-      version=versiointi.versionumero(ref=ref),
-      historia=versiointi.historia(ref=ref),
-    ))
-  except ValueError:
-    warnings.warn('git-tietovarastoa ei löytynyt', RuntimeWarning)
-    param['version'] = datetime.now().strftime('%Y%m%d.%H%M%s')
-  return param
+  return {
+    **param,
+    'version': versiointi.versionumero(ref=ref),
+    'historia': versiointi.historia(ref=ref),
+  }
   # def asennustiedot
