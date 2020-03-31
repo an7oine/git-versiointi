@@ -57,7 +57,7 @@ def asennustiedot(setup_py, **kwargs):
   parametrit = configparser.ConfigParser()
   parametrit.read(os.path.join(polku, 'setup.cfg'))
   if parametrit.has_section('versiointi'):
-    kwargs.update(dict(parametrit['versiointi']))
+    kwargs = dict(**kwargs, **dict(parametrit['versiointi']))
 
   # Alusta versiointiolio.
   try:
