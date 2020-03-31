@@ -2,12 +2,11 @@
 
 import configparser
 from datetime import datetime
-import itertools
 import os
 import re
-import sys
 import warnings
 
+from .parametrit import kasittele_parametrit
 from .versiointi import Versiointi
 
 
@@ -30,9 +29,10 @@ def vaatimukset(setup_py):
 def asennustiedot(setup_py, **kwargs):
   '''
   Palauta `setup()`-kutsulle annettavat lisäparametrit.
-  '''
-  import distutils
 
+  Args:
+    setup_py: setup.py-tiedoston nimi polkuineen (__file__)
+  '''
   # Muodosta setup()-parametrit.
   param = {}
 
@@ -66,53 +66,14 @@ def asennustiedot(setup_py, **kwargs):
     warnings.warn('git-tietovarastoa ei löytynyt', RuntimeWarning)
     return {'version': datetime.now().strftime('%Y%m%d.%H%M%s')}
 
-  # Poimi mahdollinen `--ref`-parametri komentoriviltä.
-  try:
-    ref_i = sys.argv.index('--ref', 0, -1)
-  except ValueError:
-    ref = None
-  else:
-    ref = sys.argv[ref_i + 1]
-    sys.argv[ref_i:ref_i+2] = []
-
-  # Poimi ja tulosta annettuun versioon liittyvä
-  # git-revisio `--ref`-parametrillä.
-  oletus_hdo = distutils.dist.Distribution.handle_display_options
-  def handle_display_options(self, option_order):
-    option_order_muutettu = []
-    muutettu = False
-    for (opt, val) in option_order:
-      if opt == 'ref':
-        revisio = versiointi.revisio(val, ref=ref)
-        if revisio is None:
-          # pylint: disable=no-member
-          raise distutils.errors.DistutilsOptionError(
-            f'versiota {val} vastaavaa git-revisiota ei löydy'
-          )
-        print(revisio)
-        muutettu = True
-      elif opt == 'historia':
-        for versio in itertools.islice(
-          versiointi.historia(ref=ref), 0, int(val)
-        ):
-          print(versio)
-        muutettu = True
-      else:
-        option_order_muutettu.append((opt, val))
-    return oletus_hdo(
-      self, option_order_muutettu if muutettu else option_order
-    ) or muutettu
-    # def handle_display_options
-  distutils.dist.Distribution.handle_display_options = handle_display_options
-  distutils.dist.Distribution.display_options += [
-    ('historia=', None, 'tulosta annetun pituinen versiohistoria'),
-    ('ref=', None, 'tulosta annettua versiota vastaava git-revisio'),
-  ]
+  # Näytä pyydettäessä tulosteena paketin versiotiedot.
+  # Paluuarvona saadaan komentoriviltä määritetty revisio.
+  pyydetty_ref = kasittele_parametrit(versiointi)
 
   # Muodosta versionumero ja git-historia.
   return {
     **param,
-    'version': versiointi.versionumero(ref=ref),
-    'historia': versiointi.historia(ref=ref),
+    'version': versiointi.versionumero(ref=pyydetty_ref),
+    'historia': versiointi.historia(ref=pyydetty_ref),
   }
   # def asennustiedot
