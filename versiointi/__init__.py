@@ -6,7 +6,10 @@ import os
 import re
 import warnings
 
+from setuptools.command.build_py import build_py
+
 from .parametrit import kasittele_parametrit
+from .tiedostot import tiedostokohtainen_versiointi
 from .versiointi import Versiointi
 
 
@@ -69,6 +72,10 @@ def asennustiedot(setup_py, **kwargs):
   # Näytä pyydettäessä tulosteena paketin versiotiedot.
   # Paluuarvona saadaan komentoriviltä määritetty revisio.
   pyydetty_ref = kasittele_parametrit(versiointi)
+
+  # Puukota `build_py`-komento huomioimaan tiedostokohtaiset
+  # versiointimääritykset.
+  tiedostokohtainen_versiointi(build_py, versiointi)
 
   # Muodosta versionumero ja git-historia.
   return {
