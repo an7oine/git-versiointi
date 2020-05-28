@@ -15,6 +15,14 @@ class Tietovarasto(Repo):
   VERSIO = re.compile(r'^v[0-9]', flags=re.IGNORECASE)
   KEHITYSVERSIO = re.compile(r'(.+[a-z])([0-9]*)$', flags=re.IGNORECASE)
 
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    leimat = self.versioleimat = {}
+    for l in self.tags:
+      if self.VERSIO.match(str(l)):
+        leimat.setdefault(l.commit.binsha, []).append(l)
+    # def __init__
+
   def muutos(self, ref=None):
     '''
     Etsitään ja palautetaan annetun git-objektin osoittama muutos (git-commit).
@@ -37,17 +45,15 @@ class Tietovarasto(Repo):
     viittaukseen osoittava leima.
     Ohita kehitysversiot, ellei toisin pyydetä.
     '''
-    ref = self.muutos(ref)
-    if kehitysversio:
-      suodatin = lambda l: l.commit == ref and self.VERSIO.match(str(l))
-    else:
-      suodatin = lambda l: (
-        l.commit == ref
-        and self.VERSIO.match(str(l)) and not self.KEHITYSVERSIO.match(str(l))
+    versiot = self.versioleimat.get(self.muutos(ref).binsha, [])
+    if not kehitysversio:
+      versiot = filter(
+        lambda l: not self.KEHITYSVERSIO.match(str(l)),
+        versiot
       )
     try:
       return next(iter(sorted(
-        filter(suodatin, self.tags),
+        versiot,
         key=lambda x: pkg_resources.parse_version(str(x)),
         reverse=True,
       )))
