@@ -63,7 +63,7 @@ class Tietovarasto(Repo):
   def oksa(self, ref=None):
     ref = self.muutos(ref)
     try:
-      master, = self.merge_base('master', ref)
+      master, = self.merge_base('origin/master', ref)
     except: # pylint: disable=bare-except
       return None, None
     oksa = 0
