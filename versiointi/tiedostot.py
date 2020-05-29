@@ -9,6 +9,45 @@ VERSIOINTI = re.compile(
   r'^# versiointi: ((\w+)|[*])$'
 )
 
+
+def tiedostoversiot(versiointi, tiedosto):
+  '''Hae tiedostossa määritetyn käytännön mukaiset aiemmat versiot.
+
+  Args:
+    versiointi (Versiointi)
+    tiedosto (str): suhteellinen tiedostonimi
+      alkaen git-projektin juuresta
+
+  Yields:
+    (versionumero, tiedostosisältö)
+  '''
+  # Tutki, sisältääkö tiedostosisältö versiointimäärityksen.
+  with open(os.path.join(
+    versiointi.tietovarasto.working_tree_dir,
+    tiedosto
+  ), 'r') as tiedostosisalto:
+    for rivi in tiedostosisalto:
+      tiedoston_versiointi = VERSIOINTI.match(rivi)
+      if tiedoston_versiointi:
+        alkaen = tiedoston_versiointi[2]
+        break
+    else:
+      # Ellei, poistutaan nopeasti.
+      return
+    # with tiedostosisalto
+
+  # Käy läpi kyseistä tiedostoa koskevat muutokset,
+  # tuota versionumero ja tiedstosisältö kunkin muutoksen kohdalla.
+  for ref in versiointi.tietovarasto.git.rev_list(
+    f'{alkaen}..HEAD' if alkaen else 'HEAD', '--', tiedosto
+  ).splitlines():
+    yield versiointi.versionumero(ref), versiointi.tietovarasto.git.show(
+      ref + ':' + tiedosto, stdout_as_string=False
+    )
+    # for ref in versiointi.tietovarasto.git.rev_list
+  # def tiedostoversiot
+
+
 def tiedostokohtainen_versiointi(komento, versiointi):
   oletus = komento.build_module
 
@@ -16,38 +55,25 @@ def tiedostokohtainen_versiointi(komento, versiointi):
     # Asenna tiedosto normaalisti.
     oletustulos = oletus(self, module, module_file, package)
 
-    # Tutki, sisältääkö tiedostosisältö versiointimäärityksen.
-    with open(module_file, 'r') as tiedosto:
-      for rivi in tiedosto:
-        tiedoston_versiointi = VERSIOINTI.match(rivi)
-        if tiedoston_versiointi:
-          alkaen = tiedoston_versiointi[2]
-          break
-      else:
-        # Ellei, poistutaan nopeasti.
-        return oletustulos
-      # with tiedosto
-
     # Ks. `distutils.command.build_py.build_py.build_module`.
     if isinstance(package, str):
       package = package.split('.')
 
-    # Käy läpi kyseistä tiedostoa koskevat muutokset,
-    # tallenna tiedoston kunkin muutoksen kohdalla
-    # lisäten tiedostonimeen muutosta vastaava versionumero.
-    for ref in versiointi.tietovarasto.git.rev_list(
-      f'{alkaen}..HEAD' if alkaen else 'HEAD', '--', module_file
-    ).splitlines():
-      versionumero = versiointi.versionumero(ref)
+    # Tallenna tiedoston versio kunkin muutoksen kohdalla;
+    # lisää tiedostonimeen vastaava versionumero.
+    for versionumero, tiedostosisalto in tiedostoversiot(
+      versiointi, module_file
+    ):
+      # Muodosta tulostiedoston nimi.
       outfile = self.get_module_outfile(self.build_lib, package, module)
       outfile = f'-{versionumero}'.join(os.path.splitext(outfile))
+
+      # Kirjoita sisältö tulostiedostoon, tee muistiinpano.
       with open(outfile, 'wb') as tiedosto:
-        tiedosto.write(versiointi.tietovarasto.git.show(
-          ref + ':' + module_file, stdout_as_string=False
-        ))
-        # with open as tiedosto
+        tiedosto.write(tiedostosisalto)
       self._build_py__updated_files.append(outfile)
-      # for ref in versiointi.tietovarasto.git.rev_list
+
+      # for versionumero, tiedostosisalto in tiedostoversiot
 
     # Palautetaan kuten oletus.
     return oletustulos
