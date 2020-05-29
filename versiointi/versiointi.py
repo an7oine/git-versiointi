@@ -112,9 +112,9 @@ class Versiointi:
     if not oksa:
       return itertools.repeat(None)
     param = {'master': self.versionumero(master)}
-    for haara in self.tietovarasto.branches:
+    for haara in self.tietovarasto.vierashaarat:
       if self.tietovarasto.muutos(ref) in self.tietovarasto.muutokset(haara):
-        param['haara'] = haara
+        param['haara'] = haara.remote_head
         break
     else:
       return itertools.repeat(None)

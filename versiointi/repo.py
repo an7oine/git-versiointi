@@ -7,6 +7,7 @@ import pkg_resources
 
 from git.objects.commit import Commit
 from git.objects.tag import TagObject
+from git.refs.remote import RemoteReference
 from git import Repo
 
 
@@ -38,6 +39,19 @@ class Tietovarasto(Repo):
     else:
       return self.muutos(ref.commit)
     # def muutos
+
+  @property
+  def vierashaarat(self):
+    '''Tietovaraston vieraspään sisältämät haarat.
+
+    Ohitetaan refs/remotes/origin/HEAD.
+    '''
+    return (
+      haara
+      for haara in RemoteReference.iter_items(self)
+      if haara.is_detached
+    )
+    # def vierashaarat
 
   def leima(self, ref=None, kehitysversio=False):
     '''
