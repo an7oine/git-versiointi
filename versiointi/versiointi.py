@@ -135,6 +135,12 @@ class Versiointi:
     Returns:
       versionumero (str): esim. '1.0.2'
     '''
+    # Tarkista ensin, että muutos on olemassa.
+    try: self.tietovarasto.muutos(ref)
+    except ValueError:
+      # Muodosta väliaikainen versionumero tyyppiä 0.0.
+      return self._muotoile(leima=None, etaisyys=0)
+
     oksa = next(self._oksan_tiedot(ref))
 
     # Jos viittaus osoittaa suoraan johonkin
@@ -177,6 +183,10 @@ class Versiointi:
     '''
     # pylint: disable=redefined-argument-from-local
     # pylint: disable=stop-iteration-return
+    # Tarkista ensin, että muutos on olemassa.
+    try: self.tietovarasto.muutos(ref)
+    except ValueError: return
+
     oksan_tiedot = self._oksan_tiedot(ref)
     for ref, leima, etaisyys in self.tietovarasto.muutosloki(ref):
       if getattr(leima, 'object', None) == ref and not etaisyys:
