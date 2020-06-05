@@ -8,6 +8,7 @@ import sys
 from distutils.errors import DistutilsSetupError
 from setuptools.command import build_py as _build_py
 
+from .oletus import VERSIOKAYTANTO
 from .parametrit import Distribution
 from .tiedostot import build_py
 from .vaatimukset import asennusvaatimukset
@@ -24,7 +25,11 @@ def asennustiedot(setup_py):
   ''' Vanha käyttötapa: `install_requires`-parametri. '''
   import warnings
   from setuptools import SetuptoolsDeprecationWarning
-  warnings.warn('asennustiedot()-mekanismi on vanhentunut.')
+  warnings.warn(
+    'asennustiedot()-mekanismi on vanhentunut.',
+    SetuptoolsDeprecationWarning,
+    stacklevel=2,
+  )
   requirements = asennusvaatimukset(setup_py)
   return {
     **({'install_requires': requirements} if requirements else {})
@@ -62,9 +67,14 @@ def tarkista_git_versiointi(dist, attr, value):
 
   # Alusta versiointiolio ja aseta se jakelun tietoihin.
   try:
-    dist.git_versiointi = Versiointi(polku, **(
-      parametrit['versiointi'] if parametrit.has_section('versiointi') else {}
-    ))
+    dist.git_versiointi = Versiointi(
+      polku,
+      kaytanto=(
+        parametrit['versiointi']
+        if 'versiointi' in parametrit
+        else VERSIOKAYTANTO
+      )
+    )
   except ValueError:
     raise DistutilsSetupError(
       f'git-tietovarastoa ei löydy hakemistosta {polku!r}'
