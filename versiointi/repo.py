@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
 
 import itertools
-import re
 
-import pkg_resources
+from pkg_resources import parse_version
 
 from git.objects.commit import Commit
 from git.objects.tag import TagObject
-from git.refs.remote import RemoteReference
 from git import Repo
+
+from .oletus import VERSIO, KEHITYSVERSIO
 
 
 class Tietovarasto(Repo):
-
-  VERSIO = re.compile(r'^v[0-9]', flags=re.IGNORECASE)
-  KEHITYSVERSIO = re.compile(r'(.+[a-z])([0-9]*)$', flags=re.IGNORECASE)
+  ''' Täydennetty git-tietovarastoluokka. '''
 
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
     leimat = self.versioleimat = {}
-    for l in self.tags:
-      if self.VERSIO.match(str(l)):
-        leimat.setdefault(l.commit.binsha, []).append(l)
+    for leima in self.tags:
+      if VERSIO.match(str(leima)):
+        leimat.setdefault(leima.commit.binsha, []).append(leima)
+    self.haarat = {}
     # def __init__
 
   def muutos(self, ref=None):
@@ -40,18 +39,29 @@ class Tietovarasto(Repo):
       return self.muutos(ref.commit)
     # def muutos
 
-  @property
-  def vierashaarat(self):
-    '''Tietovaraston vieraspään sisältämät haarat.
-
-    Ohitetaan refs/remotes/origin/HEAD.
+  def haara(self, ref=None, tyyppi=None):
     '''
-    return (
-      haara
-      for haara in RemoteReference.iter_items(self)
-      if haara.is_detached
-    )
-    # def vierashaarat
+    Etsitään ja palautetaan se haara (esim 'ref/heads/master'),
+    joka sisältää annetun git-revision ja täsmää annettuun tyyppiin
+    (tai välilyönnillä erotettuihin tyyppeihin).
+
+    Useista täsmäävistä haaroista palautetaan jokin satunnainen.
+
+    Mikäli yhtään täsmäävää haaraa ei löydy, palautetaan None.
+
+    Käytetään välimuistia
+    '''
+    ref = self.muutos(ref)
+    try: return self.haarat[ref.binsha, tyyppi]
+    except KeyError: pass
+    haara = self.haarat[ref.binsha, tyyppi] = self.git.for_each_ref(
+      '--count=1',
+      '--format=%(refname)',
+      '--contains', ref,
+      *(tyyppi.split(' ') if tyyppi else ()),
+    ) or None
+    return haara
+    # def haara
 
   def leima(self, ref=None, kehitysversio=False):
     '''
@@ -62,13 +72,13 @@ class Tietovarasto(Repo):
     versiot = self.versioleimat.get(self.muutos(ref).binsha, [])
     if not kehitysversio:
       versiot = filter(
-        lambda l: not self.KEHITYSVERSIO.match(str(l)),
+        lambda l: not KEHITYSVERSIO.match(str(l)),
         versiot
       )
     try:
       return next(iter(sorted(
         versiot,
-        key=lambda x: pkg_resources.parse_version(str(x)),
+        key=lambda x: parse_version(str(x)),
         reverse=True,
       )))
     except StopIteration:
@@ -76,27 +86,16 @@ class Tietovarasto(Repo):
     # def leima
 
   def muutokset(self, ref=None):
+    '''
+    Tuota annettu revisio ja kaikki sen edeltäjät.
+    '''
     ref = self.muutos(ref)
     return itertools.chain((ref, ), ref.iter_parents())
     # def muutokset
 
-  def oksa(self, ref=None):
-    ref = self.muutos(ref)
-    try:
-      master, = self.merge_base('origin/master', ref)
-    except: # pylint: disable=bare-except
-      return None, None
-    oksa = 0
-    for muutos in self.muutokset(ref):
-      if muutos == master:
-        return master, oksa
-      oksa += 1
-    raise RuntimeError
-    # def oksa
-
   def muutosloki(self, ref=None):
     '''
-    Tuota git-tietovaraston muutosloki alkaen annetusta muutoksesta.
+    Tuota git-tietovaraston muutosloki alkaen annetusta revisiosta.
 
     Args:
       polku (str): `.git`-alihakemiston sisältävä polku
