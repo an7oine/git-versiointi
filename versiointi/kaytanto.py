@@ -18,6 +18,7 @@ class Kaytanto(type):
       **attrs,
       f'_{name}__tyyppi': tyyppi,
       f'_{name}__kaytanto': staticmethod(kaytanto),
+      f'_{name}__valimuisti': {},
     })
     # def __new__
 
@@ -28,6 +29,10 @@ class Kaytanto(type):
   @property
   def _kaytanto(cls):
     return getattr(cls, f'_{cls.__name__}__kaytanto')
+
+  @property
+  def _valimuisti(cls):
+    return getattr(cls, f'_{cls.__name__}__valimuisti')
 
   # class Kaytanto
 
@@ -71,16 +76,39 @@ class VersiointiMeta(Kaytanto):
           if not etaisyys:
             return versio, etaisyys
           tyyppi, kaytanto = __class__._tyyppi, __class__._kaytanto
-          for j, muutos in enumerate(itertools.islice(
-            self.tietovarasto.muutokset(ref), etaisyys
-          )):
-            haara = self.tietovarasto.haara(muutos, tyyppi)
+          valimuisti = __class__._valimuisti
+          def etsi_haara(ref):
+            haara = self.tietovarasto.haara(ref, tyyppi)
             if haara is not None:
-              return kaytanto(
-                ref=muutos, haara=haara.split('/')[-1],
-                versio=versio, etaisyys=etaisyys-j,
-              ), j
-            # for j, muutos in enumerate(itertools.islice
+              return ref, haara, 0
+            isannat, j = self.tietovarasto.muutos(ref).parents, 1
+            isanta = None
+            while True:
+              for isanta in isannat:
+                haara = self.tietovarasto.haara(isanta, tyyppi)
+                if haara is not None:
+                  return isanta, haara, etaisyys
+              isannat = sum((isanta.parents for isanta in isannat), ())
+              j += 1
+              if j >= etaisyys:
+                break
+            return None, None, None
+          muutos, haara, j = etsi_haara(ref)
+          if haara is not None:
+            return kaytanto(
+              ref=muutos, haara=haara.split('/')[-1],
+              versio=versio, etaisyys=etaisyys-j,
+            ), j
+          #for j, muutos in enumerate(itertools.islice(
+          #  self.tietovarasto.muutokset(ref), etaisyys
+          #)):
+          #  haara = self.tietovarasto.haara(muutos, tyyppi)
+          #  if haara is not None:
+          #    return kaytanto(
+          #      ref=muutos, haara=haara.split('/')[-1],
+          #      versio=versio, etaisyys=etaisyys-j,
+          #    ), j
+          #  # for j, muutos in enumerate(itertools.islice
           return versio, etaisyys
           # def versio_ja_etaisyys
         # class Haaraversio
