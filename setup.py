@@ -17,6 +17,7 @@ setuptools.setup(
   url='https://github.com/an7oine/git-versiointi.git',
   author='Antti Hautaniemi',
   author_email='antti.hautaniemi@pispalanit.fi',
+  licence='MIT',
   packages=setuptools.find_packages(),
   entry_points={
     'distutils.setup_keywords': [
