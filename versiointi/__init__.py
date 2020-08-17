@@ -3,30 +3,14 @@
 import configparser
 from datetime import datetime
 import os
-import re
 import warnings
 
 from setuptools.command.build_py import build_py
 
 from .parametrit import kasittele_parametrit
 from .tiedostot import tiedostokohtainen_versiointi
+from .vaatimukset import asennusvaatimukset
 from .versiointi import Versiointi
-
-
-def vaatimukset(setup_py):
-  '''
-  Palauta `requirements.txt`-tiedostossa määritellyt asennusvaatimukset.
-  '''
-  requirements_txt = os.path.join(
-    os.path.dirname(setup_py), 'requirements.txt'
-  )
-  return [
-    # Poimi muut kuin tyhjät ja kommenttirivit.
-    rivi
-    for rivi in map(str.strip, open(requirements_txt))
-    if rivi and not rivi.startswith('#')
-  ] if os.path.isfile(requirements_txt) else []
-  # def vaatimukset
 
 
 def asennustiedot(setup_py, **kwargs):
@@ -40,17 +24,9 @@ def asennustiedot(setup_py, **kwargs):
   param = {}
 
   # Lisää asennusvaatimukset, jos on.
-  requirements = vaatimukset(setup_py)
+  requirements = asennusvaatimukset(setup_py)
   if requirements:
-    param['install_requires'] = [
-      # Lisää paketin nimi kunkin `git+`-alkuisen rivin alkuun.
-      re.sub(
-        r'^(git\+(ssh|https).*/([^/.@]+)(\.git).*)$',
-        r'\3 @ \1',
-        rivi
-      )
-      for rivi in requirements
-    ]
+    param['install_requires'] = requirements
     # if requirements
 
   # Ota hakemiston nimi.
