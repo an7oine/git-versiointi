@@ -8,7 +8,7 @@ import sys
 from distutils.errors import DistutilsSetupError
 from setuptools.command import build_py as _build_py
 
-from .parametrit import kasittele_parametrit
+from .parametrit import Distribution
 from .tiedostot import build_py
 from .vaatimukset import asennusvaatimukset
 
@@ -76,13 +76,12 @@ def finalize_distribution_options(dist):
     except (ModuleNotFoundError, DistutilsSetupError):
       return
 
-  # Näytä pyydettäessä tulosteena paketin versiotiedot.
-  # Paluuarvona saadaan komentoriviltä määritetty revisio.
-  pyydetty_ref = kasittele_parametrit(dist.git_versiointi)
+  # Aseta jakelun tyyppi; tarvitaan komentoriviparametrien lisäämiseksi.
+  dist.__class__ = Distribution
 
   # Aseta versionumero ja git-historia.
-  dist.metadata.version = dist.git_versiointi.versionumero(ref=pyydetty_ref)
-  dist.historia = dist.git_versiointi.historia(ref=pyydetty_ref)
+  dist.metadata.version = dist.git_versiointi.versionumero(ref=dist.git_ref)
+  dist.historia = dist.git_versiointi.historia(ref=dist.git_ref)
 
   # Aseta versiointi tiedostokohtaisen versioinnin määreeksi.
   _build_py.build_py.git_versiointi = dist.git_versiointi

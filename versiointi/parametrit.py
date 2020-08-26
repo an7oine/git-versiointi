@@ -1,56 +1,60 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=invalid-name
 
-import distutils
+from distutils.errors import DistutilsOptionError
+import functools
 import itertools
 import sys
 
+from setuptools import dist
 
-def kasittele_parametrit(versiointi):
-  # Poimi mahdollinen `--ref`-parametri komentoriviltä.
+
+@functools.wraps(dist.Distribution, updated=())
+class Distribution(dist.Distribution):
+  display_options = dist.Distribution.display_options + [
+    ('ref', None, 'tarkastele nimettyä git-revisiota'),
+    ('historia=', None, 'tulosta annetun pituinen versiohistoria'),
+    ('revisio=', None, 'tulosta annettua versiota vastaava git-revisio'),
+  ]
+
+  git_versiointi = None
+
+  # Poimi mahdollinen komentorivillä annettu revisio.
   try:
     ref_i = sys.argv.index('--ref', 0, -1)
   except ValueError:
-    ref = None
+    git_ref = None
   else:
-    ref = sys.argv[ref_i + 1]
-    sys.argv[ref_i:ref_i+2] = []
+    git_ref, sys.argv[ref_i:ref_i + 2] = sys.argv[ref_i + 1], []
 
-  # Poimi ja tulosta annettuun versioon liittyvä
-  # git-revisio `--ref`-parametrillä.
-  oletus_hdo = distutils.dist.Distribution.handle_display_options
   def handle_display_options(self, option_order):
+    if self.git_versiointi is None:
+      return super().handle_display_options(option_order)
+
     option_order_muutettu = []
     muutettu = False
     for (opt, val) in option_order:
-      if opt == 'revisio':
-        revisio = versiointi.revisio(val, ref=ref)
+      if opt == 'ref':
+        muutettu = True
+      elif opt == 'revisio':
+        revisio = self.git_versiointi.revisio(val, ref=self.git_ref)
         if revisio is None:
           # pylint: disable=no-member
-          raise distutils.errors.DistutilsOptionError(
+          raise DistutilsOptionError(
             f'versiota {val} vastaavaa git-revisiota ei löydy'
           )
         print(revisio)
         muutettu = True
       elif opt == 'historia':
         for versio in itertools.islice(
-          versiointi.historia(ref=ref), 0, int(val)
+          self.git_versiointi.historia(ref=self.git_ref), 0, int(val)
         ):
           print(versio)
         muutettu = True
       else:
         option_order_muutettu.append((opt, val))
-    return oletus_hdo(
-      self, option_order_muutettu if muutettu else option_order
+    return super().handle_display_options(
+      option_order_muutettu if muutettu else option_order
     ) or muutettu
     # def handle_display_options
-
-  distutils.dist.Distribution.handle_display_options = handle_display_options
-  distutils.dist.Distribution.display_options += [
-    ('historia=', None, 'tulosta annetun pituinen versiohistoria'),
-    ('revisio=', None, 'tulosta annettua versiota vastaava git-revisio'),
-  ]
-
-  # Palautetaan mahdollinen vivun avulla määritetty git-revisio.
-  return ref
-  # def kasittele_parametrit
+  # class Distribution
