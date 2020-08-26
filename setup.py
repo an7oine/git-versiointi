@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import os
-import setuptools
-
-setuptools._install_setup_requires({'setup_requires': ['GitPython']})
-from versiointi import asennustiedot
+from setuptools import setup, find_packages
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8') as f:
   long_description = f.read()
 
-setuptools.setup(
+setup(
+  setup_requires=['GitPython'],
   name='git-versiointi',
   description='Asennettavan pakettiversion haku git-leimojen mukaan',
   long_description=long_description,
@@ -18,7 +16,7 @@ setuptools.setup(
   author='Antti Hautaniemi',
   author_email='antti.hautaniemi@pispalanit.fi',
   licence='MIT',
-  packages=setuptools.find_packages(),
+  packages=find_packages(),
   entry_points={
     'distutils.setup_keywords': [
       'git_versiointi = versiointi:tarkista_git_versiointi',
@@ -32,6 +30,5 @@ setuptools.setup(
   },
   classifiers=[
     'Programming Language :: Python :: 3',
-  ],
-  **asennustiedot(__file__)
+  ]
 )

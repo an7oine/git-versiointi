@@ -11,7 +11,6 @@ from setuptools.command import build_py as _build_py
 from .parametrit import kasittele_parametrit
 from .tiedostot import build_py
 from .vaatimukset import asennusvaatimukset
-from .versiointi import Versiointi
 
 
 # Puukota `build_py`-komento huomioimaan tiedostokohtaiset
@@ -34,6 +33,8 @@ def asennustiedot(setup_py):
 def tarkista_git_versiointi(dist, attr, value):
   ''' Hae Git-tietovarasto määritetyn setup.py-tiedoston polusta. '''
   # pylint: disable=unused-argument, protected-access
+  from .versiointi import Versiointi
+
   if isinstance(value, Versiointi):
     # Hyväksytään aiemmin asetettu versiointiolio (tupla-ajo).
     return
