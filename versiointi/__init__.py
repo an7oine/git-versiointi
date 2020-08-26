@@ -71,7 +71,10 @@ def finalize_distribution_options(dist):
   elif getattr(dist, 'git_versiointi', None) is not None:
     pass
   else:
-    return
+    try:
+      tarkista_git_versiointi(dist, 'git_versiointi', sys.argv[0])
+    except (ModuleNotFoundError, DistutilsSetupError):
+      return
 
   # Näytä pyydettäessä tulosteena paketin versiotiedot.
   # Paluuarvona saadaan komentoriviltä määritetty revisio.
