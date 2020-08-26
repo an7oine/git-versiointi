@@ -2,20 +2,23 @@
 
 import configparser
 from datetime import datetime
+import functools
 import os
 import warnings
 
-from setuptools.command.build_py import build_py
+from setuptools.command import build_py as _build_py
 
 from .parametrit import kasittele_parametrit
-from .tiedostot import tiedostokohtainen_versiointi
+from .tiedostot import build_py
 from .vaatimukset import asennusvaatimukset
 from .versiointi import Versiointi
 
 
-def asennustiedot(setup_py, **kwargs):
-  '''
-  Palauta `setup()`-kutsulle annettavat lisäparametrit.
+# Puukota `build_py`-komento huomioimaan tiedostokohtaiset
+# versiointimääritykset.
+_build_py.build_py = functools.wraps(_build_py.build_py, updated=())(
+  type(_build_py.build_py)('build_py', (build_py, _build_py.build_py), {})
+)
 
   Args:
     setup_py: setup.py-tiedoston nimi polkuineen (__file__)
@@ -49,9 +52,8 @@ def asennustiedot(setup_py, **kwargs):
   # Paluuarvona saadaan komentoriviltä määritetty revisio.
   pyydetty_ref = kasittele_parametrit(versiointi)
 
-  # Puukota `build_py`-komento huomioimaan tiedostokohtaiset
-  # versiointimääritykset.
-  tiedostokohtainen_versiointi(build_py, versiointi)
+  # Aseta versiointi tiedostokohtaisen versioinnin määreeksi.
+  _build_py.build_py.git_versiointi = versiointi
 
   # Muodosta versionumero ja git-historia.
   return {

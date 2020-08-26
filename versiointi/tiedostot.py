@@ -48,12 +48,14 @@ def tiedostoversiot(versiointi, tiedosto):
   # def tiedostoversiot
 
 
-def tiedostokohtainen_versiointi(komento, versiointi):
-  oletus = komento.build_module
-
+class build_py:
+  # pylint: disable=invalid-name, no-member
+  git_versiointi = None
   def build_module(self, module, module_file, package):
     # Asenna tiedosto normaalisti.
-    oletustulos = oletus(self, module, module_file, package)
+    oletustulos = super().build_module(module, module_file, package)
+    if self.git_versiointi is None:
+      return oletustulos
 
     # Ks. `distutils.command.build_py.build_py.build_module`.
     if isinstance(package, str):
@@ -62,7 +64,7 @@ def tiedostokohtainen_versiointi(komento, versiointi):
     # Tallenna tiedoston versio kunkin muutoksen kohdalla;
     # lisää tiedostonimeen vastaava versionumero.
     for versionumero, tiedostosisalto in tiedostoversiot(
-      versiointi, module_file
+      self.git_versiointi, module_file
     ):
       # Muodosta tulostiedoston nimi.
       outfile = self.get_module_outfile(self.build_lib, package, module)
@@ -78,6 +80,4 @@ def tiedostokohtainen_versiointi(komento, versiointi):
     # Palautetaan kuten oletus.
     return oletustulos
     # def build_module
-
-  komento.build_module = build_module
-  # def tiedostokohtainen_versiointi
+  # class build_py
