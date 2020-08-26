@@ -10,19 +10,16 @@ Asennusta järjestelmään ei tarvita työasemalla eikä palvelimella.
 
 Työkalut otetaan sen sijaan käyttöön kunkin halutun pip-asennettavan git-projektin osalta muokkaamalla vastaavaa `setup.py`-tiedostoa seuraavasti:
 ```python
-import setuptools
-
-setuptools._install_setup_requires({'setup_requires': ['git-versiointi']})
-from versiointi import asennustiedot
-
-setuptools.setup(
+...
+setup(
   ...
-  # version=...             <-- POISTA TÄMÄ
-  # install_requires=...    <-- POISTA TÄMÄ
+  setup_requires=['git-versiointi'], # <-- LISÄTÄÄN
   ...
-  **asennustiedot(__file__)
+  # version=...                        <-- POISTETAAN
+  ...
 )
 ```
+Lisäksi voidaan tarvittaessa antaa parametrin `git_versiointi` arvoksi `setup.py`-tiedoston sijainti; oletuksena tämä on `sys.argv[0]`.
 
 Kun pakettia asennetaan joko työasemalla (`python setup.py develop`) tai palvelimella (`pip install ...`), tekee järjestelmä `setup.py`-tiedoston suorittamisen yhteydessä automaattisesti seuraavaa:
 * asentaa `git-versiointi`-paketin, ellei sitä löydy jo valmiiksi järjestelmästä
@@ -40,10 +37,9 @@ Python-kutsulle voidaan antaa parametri `--ref XXX`, missä `XXX` on git-muutoks
 
 # Toimintaperiaate
 
-Skripti palauttaa `setup()`-kutsua varten seuraavat parametrit:
+Skripti asettaa asennettavan python-jakelun tietoihin seuraavat tiedot:
 * `version`: versionumero
 * `historia`: JSON-data, joka sisältää projektin git-versiohistorian
-* `install_requires`: asennuksen vaatimat riippuvuudet
 
 ## Versionumeron muodostus
 
@@ -60,10 +56,8 @@ Oletuksena versio- ja aliversionumero lasketaan näiden tietojen mukaan seuraava
 * jos lähin, viimeisin leima kuvaa kehitysversiota (esim. `v1.2.3a1`, `v1.2.3.dev3`), muodostetaan aliversio lisäämällä etäisyys leiman loppunumeroon, esim. etäisyys 3 -> `v1.2.3a4`, `v1.2.3.dev6`
 * muussa tapauksessa aliversion etäisyys lisätään alanumerona leiman kuvaaman versionumero perään, esim. `v1.2` + etäisyys 3 (kolme muutosta) --> versionumero `v1.2.3`
 
-Versionumeroidan määritys voidaan räätälöidä seuraavilla tavoilla:
-* antamalla `asennustiedot()`-funktiokutsulle nimettyinä parametreinä `versio`- ja/tai `aliversio`-funktio, joka saa nimetyt parametrit `leima` ja `etaisyys` ja jonka tulee palauttaa versionumero merkkijonona
-* antamalla `asennustiedot()`-funktiokutsulle vastaavat parametrit merkkijonoina. Tällöin merkkijonoihin interpoloidaan edellä mainitut parametrit `str.format`-kutsun avulla.
-* määrittämällä em. interpoloitavat merkkijonot paketin `setup.cfg`-tiedostossa `[versiointi]`-osion sisällä.
+Versionumeroidan määritys voidaan räätälöidä seuraavilla tavoilla paketin `setup.cfg`-tiedostossa `[versiointi]`-osion sisällä:
+* `versio`, `aliversio`: merkkijono, johon laajennetaan parametrit `leima` ja `etaisyys`
 
 Huom. nämä räätälöinnit eivät vaikuta edellä kuvattuun kehitysversioiden numerointiin.
 
@@ -71,15 +65,6 @@ Kaikki oletusarvoiset tai räätälöidyn logiikan mukaan muodostetut versionume
 
 ## Historiatiedot
 
-`setup()`-kutsulle annettu `historia`-parametri kirjoitetaan asennetun paketin metatietoihin (`EGG-INFO`) tiedostoon `historia.json`.
+Paketin tietoihin lisättävä `historia` kirjoitetaan asennetun paketin metatietoihin (`EGG-INFO`) tiedostoon `historia.json`.
 
-Tämä on toteutettu `git-versiointi`-paketin omissa asennustiedoissa seuraavasti:
-* `entry_points[distutils.setup_keywords]`: määrittää uuden `setup()`-parametrin `historia`
-* `entry_points[egg_info.writers]`: määrittää kirjoituskomennon tiedostolle `historia.json`
-
-## Asennusvaatimukset
-
-Riippuvuudet haetaan `requirements.txt`-tiedostosta seuraavasti:
-* normaalit Pypi-paketit sellaisenaan (esim. `numpy>=1.7`)
-* git-paketteihin lisätään paketin nimi alkuun
-  - esim. `paketti @ git+https://github.com/x/paketti.git`
+Paketin omissa asennustiedoissa määritetty tietue `entry_points[egg_info.writers]` asettaa kirjoituskomennon tiedostolle `historia.json`

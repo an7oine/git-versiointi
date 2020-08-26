@@ -21,7 +21,7 @@ _build_py.build_py = functools.wraps(_build_py.build_py, updated=())(
 
 
 def asennustiedot(setup_py):
-  ''' Vanha käyttötapa.  '''
+  ''' Vanha käyttötapa, sis. `install_requires`-parametrin. '''
   requirements = asennusvaatimukset(setup_py)
   return {
     'git_versiointi': setup_py,
