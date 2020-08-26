@@ -21,11 +21,14 @@ setuptools.setup(
   packages=setuptools.find_packages(),
   entry_points={
     'distutils.setup_keywords': [
-      'historia = versiointi.egg_info:varmista_json',
+      'git_versiointi = versiointi:tarkista_git_versiointi',
     ],
     'egg_info.writers': [
       'historia.json = versiointi.egg_info:kirjoita_json',
     ],
+    'setuptools.finalize_distribution_options': [
+      'versiointi = versiointi:finalize_distribution_options',
+    ]
   },
   classifiers=[
     'Programming Language :: Python :: 3',

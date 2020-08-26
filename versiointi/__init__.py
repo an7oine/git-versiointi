@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import configparser
-from datetime import datetime
 import functools
 import os
-import warnings
+import sys
 
+from distutils.errors import DistutilsSetupError
 from setuptools.command import build_py as _build_py
 
 from .parametrit import kasittele_parametrit
@@ -20,45 +20,67 @@ _build_py.build_py = functools.wraps(_build_py.build_py, updated=())(
   type(_build_py.build_py)('build_py', (build_py, _build_py.build_py), {})
 )
 
-  Args:
-    setup_py: setup.py-tiedoston nimi polkuineen (__file__)
-  '''
-  # Muodosta setup()-parametrit.
-  param = {}
 
-  # Lisää asennusvaatimukset, jos on.
+def asennustiedot(setup_py):
+  ''' Vanha käyttötapa.  '''
   requirements = asennusvaatimukset(setup_py)
-  if requirements:
-    param['install_requires'] = requirements
-    # if requirements
+  return {
+    'git_versiointi': setup_py,
+    **({'install_requires': requirements} if requirements else {})
+  }
+  # def asennustiedot
 
-  # Ota hakemiston nimi.
-  polku = os.path.dirname(setup_py)
+
+def tarkista_git_versiointi(dist, attr, value):
+  ''' Hae Git-tietovarasto määritetyn setup.py-tiedoston polusta. '''
+  # pylint: disable=unused-argument, protected-access
+  if isinstance(value, Versiointi):
+    # Hyväksytään aiemmin asetettu versiointiolio (tupla-ajo).
+    return
+  elif not isinstance(value, str):
+    raise DistutilsSetupError(
+      f'virheellinen parametri: {attr}={value!r}'
+    )
+
+  # Poimi setup.py-tiedoston hakemisto.
+  polku = os.path.dirname(value)
 
   # Lataa oletusparametrit `setup.cfg`-tiedostosta, jos on.
   parametrit = configparser.ConfigParser()
   parametrit.read(os.path.join(polku, 'setup.cfg'))
-  if parametrit.has_section('versiointi'):
-    kwargs = dict(**kwargs, **dict(parametrit['versiointi']))
 
-  # Alusta versiointiolio.
+  # Alusta versiointiolio ja aseta se jakelun tietoihin.
   try:
-    versiointi = Versiointi(polku, **kwargs)
+    dist.git_versiointi = Versiointi(polku, **(
+      parametrit['versiointi'] if parametrit.has_section('versiointi') else {}
+    ))
   except ValueError:
-    warnings.warn('git-tietovarastoa ei löytynyt', RuntimeWarning)
-    return {'version': datetime.now().strftime('%Y%m%d.%H%M%s')}
+    raise DistutilsSetupError(
+      f'git-tietovarastoa ei löydy hakemistosta {polku!r}'
+    )
+    # except ValueError
+
+  # def tarkista_git_versiointi
+
+
+def finalize_distribution_options(dist):
+  # pylint: disable=protected-access
+  if dist.version != 0:
+    return
+  elif getattr(dist, 'git_versiointi', None) is not None:
+    pass
+  else:
+    return
 
   # Näytä pyydettäessä tulosteena paketin versiotiedot.
   # Paluuarvona saadaan komentoriviltä määritetty revisio.
-  pyydetty_ref = kasittele_parametrit(versiointi)
+  pyydetty_ref = kasittele_parametrit(dist.git_versiointi)
+
+  # Aseta versionumero ja git-historia.
+  dist.metadata.version = dist.git_versiointi.versionumero(ref=pyydetty_ref)
+  dist.historia = dist.git_versiointi.historia(ref=pyydetty_ref)
 
   # Aseta versiointi tiedostokohtaisen versioinnin määreeksi.
-  _build_py.build_py.git_versiointi = versiointi
+  _build_py.build_py.git_versiointi = dist.git_versiointi
 
-  # Muodosta versionumero ja git-historia.
-  return {
-    **param,
-    'version': versiointi.versionumero(ref=pyydetty_ref),
-    'historia': versiointi.historia(ref=pyydetty_ref),
-  }
-  # def asennustiedot
+  # def finalize_distribution_options
