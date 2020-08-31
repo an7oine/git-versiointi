@@ -30,6 +30,14 @@ def asennustiedot(setup_py):
   # def asennustiedot
 
 
+def _versionumero():
+  ''' Sisäinen käyttö: palauta pelkkä versionumero. '''
+  dist = Distribution()
+  tarkista_git_versiointi(dist, 'git_versiointi', sys.argv[0])
+  return dist.git_versiointi.versionumero(ref=dist.git_ref)
+  # def _versionumero
+
+
 def tarkista_git_versiointi(dist, attr, value):
   ''' Hae Git-tietovarasto määritetyn setup.py-tiedoston polusta. '''
   # pylint: disable=unused-argument, protected-access
@@ -87,3 +95,9 @@ def finalize_distribution_options(dist):
   _build_py.build_py.git_versiointi = dist.git_versiointi
 
   # def finalize_distribution_options
+
+
+# Määrätään yo. funktio ajettavaksi myöhemmin kuin (mm.)
+# `setuptools.dist:Distribution._finalize_setup_keywords`,
+# sillä se olettaa, että setup-parametrit on jo prosessoitu.
+finalize_distribution_options.order = 1
