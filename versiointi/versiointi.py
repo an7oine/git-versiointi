@@ -141,8 +141,6 @@ class Versiointi:
       # Muodosta väliaikainen versionumero tyyppiä 0.0.
       return self._muotoile(leima=None, etaisyys=0)
 
-    oksa = next(self._oksan_tiedot(ref))
-
     # Jos viittaus osoittaa suoraan johonkin
     # julkaisuun tai kehitysversioon, palauta se.
     leima = (
@@ -150,7 +148,9 @@ class Versiointi:
       or self.tietovarasto.leima(ref, kehitysversio=True)
     )
     if leima:
-      return self._muotoile(leima=leima, etaisyys=0, oksa=oksa)
+      return self._muotoile(leima=leima, etaisyys=0, oksa=None)
+
+    oksa = next(self._oksan_tiedot(ref))
 
     ref = self.tietovarasto.muutos(ref)
 
@@ -161,7 +161,11 @@ class Versiointi:
     for ref in ref.iter_parents():
       leima = self.tietovarasto.leima(ref, kehitysversio=True)
       if leima:
-        return self._muotoile(leima=leima, etaisyys=etaisyys, oksa=oksa)
+        return self._muotoile(
+          leima=leima,
+          etaisyys=etaisyys,
+          oksa=oksa if oksa is not None and oksa['oksa'] <= etaisyys else None,
+        )
       etaisyys += 1
 
     # Jos yhtään aiempaa versiomerkintää ei löytynyt,
