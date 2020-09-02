@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import warnings
 import itertools
+import re
+import warnings
 
 import pkg_resources
 
@@ -114,7 +115,11 @@ class Versiointi:
     param = {'master': self.versionumero(master)}
     for haara in self.tietovarasto.vierashaarat:
       if self.tietovarasto.muutos(ref) in self.tietovarasto.muutokset(haara):
-        param['haara'] = haara.remote_head
+        param['haara'] = re.sub(
+          # PEP 404: +haara.X -pääte voi sisältää
+          # vain ASCII-kirjaimia, numeroita ja pisteitä.
+          '[^a-zA-Z0-9.]', '', haara.remote_head
+        )
         break
     else:
       return itertools.repeat(None)
