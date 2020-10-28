@@ -21,10 +21,12 @@ _build_py.build_py = functools.wraps(_build_py.build_py, updated=())(
 
 
 def asennustiedot(setup_py):
-  ''' Vanha käyttötapa, sis. `install_requires`-parametrin. '''
+  ''' Vanha käyttötapa: `install_requires`-parametri. '''
+  import warnings
+  from setuptools import SetuptoolsDeprecationWarning
+  warnings.warn('asennustiedot()-mekanismi on vanhentunut.')
   requirements = asennusvaatimukset(setup_py)
   return {
-    'git_versiointi': setup_py,
     **({'install_requires': requirements} if requirements else {})
   }
   # def asennustiedot
