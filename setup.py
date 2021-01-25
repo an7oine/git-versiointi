@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import os
-from setuptools import setup, find_packages, _install_setup_requires
+from setuptools import setup, find_packages
 
-_install_setup_requires({'setup_requires': ['GitPython']})
 from versiointi import _versionumero
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8') as f:
@@ -11,7 +10,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8'
 
 setup(
   name='git-versiointi',
-  version=_versionumero(),
+  version=_versionumero(__file__),
   description='Asennettavan pakettiversion haku git-leimojen mukaan',
   long_description=long_description,
   long_description_content_type='text/markdown',
@@ -34,5 +33,5 @@ setup(
   classifiers=[
     'Programming Language :: Python :: 3',
   ],
-  install_requires=['GitPython'],
+  install_requires=['GitPython', 'setuptools>=42'],
 )

@@ -32,10 +32,10 @@ def asennustiedot(setup_py):
   # def asennustiedot
 
 
-def _versionumero():
+def _versionumero(setup_py):
   ''' Sisäinen käyttö: palauta pelkkä versionumero. '''
   dist = Distribution()
-  tarkista_git_versiointi(dist, 'git_versiointi', sys.argv[0])
+  tarkista_git_versiointi(dist, 'git_versiointi', setup_py)
   return dist.git_versiointi.versionumero(ref=dist.git_ref)
   # def _versionumero
 
