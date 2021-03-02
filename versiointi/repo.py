@@ -82,10 +82,15 @@ class Tietovarasto(Repo):
 
   def oksa(self, ref=None):
     ref = self.muutos(ref)
+    # Verrataan ensi sijassa paikalliseen masteriin;
+    # toissijaisesti vieraspään masteriin.
     try:
-      master, = self.merge_base('origin/master', ref)
+      master, = self.merge_base('master', ref)
     except: # pylint: disable=bare-except
-      return None, None
+      try:
+        master, = self.merge_base('origin/master', ref)
+      except: # pylint: disable=bare-except
+        return None, None
     oksa = 0
     for muutos in self.muutokset(ref):
       if muutos == master:

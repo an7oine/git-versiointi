@@ -113,12 +113,16 @@ class Versiointi:
     if not oksa:
       return itertools.repeat(None)
     param = {'master': self.versionumero(master)}
-    for haara in self.tietovarasto.vierashaarat:
+    # Tutki ensin vieraspään haarat, sitten paikalliset.
+    for haara, vieras in itertools.chain(
+      ((h, True) for h in self.tietovarasto.vierashaarat),
+      ((h, False) for h in self.tietovarasto.branches),
+    ):
       if self.tietovarasto.muutos(ref) in self.tietovarasto.muutokset(haara):
         param['haara'] = re.sub(
           # PEP 404: +haara.X -pääte voi sisältää
           # vain ASCII-kirjaimia, numeroita ja pisteitä.
-          '[^a-zA-Z0-9.]', '', haara.remote_head
+          '[^a-zA-Z0-9.]', '', str(haara.remote_head if vieras else haara)
         )
         break
     else:
