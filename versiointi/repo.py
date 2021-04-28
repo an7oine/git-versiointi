@@ -3,6 +3,8 @@
 import itertools
 import re
 
+from pkg_resources import parse_version
+
 from git.objects.commit import Commit
 from git.objects.tag import TagObject
 from git import Repo
@@ -73,7 +75,26 @@ class Tietovarasto(Repo):
         *(tyyppi.rsplit('/', 1)[0] for tyyppi in tyypit),
       ).split('\n')
     )
-    self.symbolit[ref.binsha, tyyppi] = symboli = next(symbolit, '') or None
+
+    # Mikäli yhtään symbolia ei löytynyt, palautetaan `None`.
+    # Mikäli löytyi yksi, palautetaan se.
+    # Mikäli löytyi useampia, palautetaan versiojärjestyksessä suurin.
+    # Löytynyt, tyhjä symboli korvataan `Nonella`.
+    try:
+      symboli, *muut = symbolit
+    except ValueError:
+      symboli = None
+    else:
+      if muut:
+        # Parsitaan symboli versionumeroksi vain tarvittaessa.
+        symboli = parse_version(symboli)
+        for muu_symboli in map(parse_version, muut):
+          if muu_symboli > symboli:
+            symboli = muu_symboli
+        symboli = str(symboli)
+        # if muut
+      symboli = symboli or None
+    self.symbolit[ref.binsha, tyyppi] = symboli
     return symboli
     # def symboli
 
