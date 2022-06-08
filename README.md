@@ -56,8 +56,7 @@ Oletuksena versio- ja aliversionumero lasketaan näiden tietojen mukaan seuraava
 * jos lähin, viimeisin leima kuvaa kehitysversiota (esim. `v1.2.3a1`, `v1.2.3.dev3`), muodostetaan aliversio lisäämällä etäisyys leiman loppunumeroon, esim. etäisyys 3 -> `v1.2.3a4`, `v1.2.3.dev6`
 * muussa tapauksessa aliversion etäisyys lisätään alanumerona leiman kuvaaman versionumero perään, esim. `v1.2` + etäisyys 3 (kolme muutosta) --> versionumero `v1.2.3`
 
-Versionumeroidan määritys voidaan räätälöidä seuraavilla tavoilla paketin `setup.cfg`-tiedostossa `[versiointi]`-osion sisällä:
-* `versio`, `aliversio`: merkkijono, johon laajennetaan parametrit `leima` ja `etaisyys`
+Versionumeroiden määritys voidaan räätälöidä paketin `setup.cfg`-tiedostossa `[versiointi]`-osion sisällä (ks. esimerkki alempana).
 
 Huom. nämä räätälöinnit eivät vaikuta edellä kuvattuun kehitysversioiden numerointiin.
 
@@ -68,3 +67,55 @@ Kaikki oletusarvoiset tai räätälöidyn logiikan mukaan muodostetut versionume
 Paketin tietoihin lisättävä `historia` kirjoitetaan asennetun paketin metatietoihin (`EGG-INFO`) tiedostoon `historia.json`.
 
 Paketin omissa asennustiedoissa määritetty tietue `entry_points[egg_info.writers]` asettaa kirjoituskomennon tiedostolle `historia.json`
+
+# Räätälöity versiointikäytäntö
+
+Määritystiedostossa setup.cfg voidaan asettaa haluttu versiointikäytäntö. Kukin määrityksen rivi vastaa tietyntyyppistä git-viittausta (leima, haara tai paljas revisio) sekä versionumeroa, joka tämäntyyppiselle viittaukselle asetetaan.
+
+Kunkin rivin avainosa tulkitaan (yhtenä tai useampana, välilyönnein erotettuna) säännöllisenä lausekkeena, joka täsmää (pitkään) git-viittaukseen: refs/.../...
+
+Lisäksi tulkitaan seuraavat erityiset avaimet:
+* `*`: mikä tahansa revisio
+* `0`: git-versiohistoria ennen ensimmäistä leimaa.
+
+Kunkin käytännön arvo-osa tulkitaan python-`f`-merkkijonona (PEP 498), johon täydennetään seuraavat muuttujat:
+
+* pohja: ulomman versiointikäytännön tuottama (annettua viittausta edeltävä) versio
+* indeksi: mahdollinen indeksi `pohja`-versioon liittyen
+  (esim. ulompi versio v1.2dev3 ==> `pohja=1.2dev`, `indeksi=3`)
+* etaisyys: etäisyys annetusta viittauksesta ulomman käytännön mukaiseen pohjaversioon
+* tunnus: leiman nimen mukaan poimittu suora versionumero (vain leimattu revisio)
+* indeksoitu: merkitse tuloksena syntyvä versionumero indeksoiduksi
+  (tällöin indeksi poimitaan versionumeron viimeisten numeroiden mukaan, oletus 0)
+
+Oletuksena käytetään versiointikäytäntöä, joka vastaa seuraavaa määritystä:
+```ini
+[versiointi]
+
+# Irtoversio: lisätään `+etäisyys`.
+*: {pohja}+{etaisyys}
+
+# Mikä tahansa haara: lisätään `+haara.etäisyys`.
+refs/heads/ refs/remotes/origin/:
+  {pohja}{int(indeksi)+etaisyys if indeksi else f'+{tunnus}.{etaisyys}'}
+
+# v- -alkuinen haara: tulkitaan kuten `master`.
+refs/heads/v-[0-9].* refs/remotes/origin/v-[0-9].*:
+  {pohja}{int(indeksi)+etaisyys if indeksi else f'.{etaisyys}'}
+
+# master-haara: lisätään pohjaversion indeksiä tai lisätään `.etäisyys`.
+refs/heads/master refs/remotes/origin/master:
+  {pohja}{int(indeksi)+etaisyys if indeksi else f'.{etaisyys}'}
+
+# Leimattu kehitysversio (v*{a,b,c,dev}*): poimitaan tunnus, indeksoidaan.
+refs/tags/v[0-9].*:
+  {tunnus}{indeksoitu}
+
+# Leimattu tuotantoversio: poimitaan tunnus sellaisenaan.
+refs/tags/v[0-9][0-9.]*?(?![a-z]+[0-9]*):
+  {tunnus}
+
+# Historian alku: 0.0.
+0:
+  0.0
+```
