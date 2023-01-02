@@ -3,6 +3,7 @@
 import configparser
 import functools
 import os
+import re
 import sys
 
 from distutils.errors import DistutilsSetupError
@@ -12,6 +13,9 @@ from .oletus import VERSIOKAYTANTO
 from .parametrit import Distribution
 from .tiedostot import build_py
 from .vaatimukset import asennusvaatimukset
+
+
+PKG_INFO_VERSIO = re.compile(r'Version\s*:\s*(.+)')
 
 
 # Puukota `build_py`-komento huomioimaan tiedostokohtaiset
@@ -94,17 +98,34 @@ def finalize_distribution_options(dist):
     try:
       tarkista_git_versiointi(dist, 'git_versiointi', sys.argv[0])
     except (ModuleNotFoundError, DistutilsSetupError):
-      return
+      dist.git_versiointi = None
 
   # Aseta jakelun tyyppi; tarvitaan komentoriviparametrien lisäämiseksi.
   dist.__class__ = Distribution
 
-  # Aseta versionumero ja git-historia.
-  dist.metadata.version = dist.git_versiointi.versionumero(ref=dist.git_ref)
-  dist.historia = dist.git_versiointi.historia(ref=dist.git_ref)
+  if dist.git_versiointi is not None:
+    # Aseta versionumero ja historia Git-tietojen perusteella.
+    dist.metadata.version = dist.git_versiointi.versionumero(ref=dist.git_ref)
+    dist.historia = dist.git_versiointi.historia(ref=dist.git_ref)
 
-  # Aseta versiointi tiedostokohtaisen versioinnin määreeksi.
-  _build_py.build_py.git_versiointi = dist.git_versiointi
+    # Aseta versiointi tiedostokohtaisen versioinnin määreeksi.
+    _build_py.build_py.git_versiointi = dist.git_versiointi
+
+  else:
+    # Yritetään hakea versiotieto `sdist`-tyyppisen paketin PKG-INFOsta.
+    try:
+      with open(os.path.join(
+        os.path.dirname(sys.argv[0]),
+        'PKG-INFO'
+      )) as pkg_info:
+        for rivi in pkg_info:
+          tulos = PKG_INFO_VERSIO.match(rivi)
+          if tulos:
+            dist.metadata.version = tulos.group(1)
+            break
+    except FileNotFoundError:
+      pass
+    # else (dist.git_versiointi is None)
 
   # def finalize_distribution_options
 
