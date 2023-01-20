@@ -4,6 +4,7 @@ import itertools
 import re
 
 from pkg_resources import parse_version
+from pkg_resources.extern.packaging.version import InvalidVersion
 
 from git.objects.commit import Commit
 from git.objects.tag import TagObject
@@ -116,7 +117,9 @@ class Tietovarasto(
     joka sisältää annetun git-revision ja täsmää annettuun tyyppiin
     (tai välilyönnillä erotettuihin tyyppeihin).
 
-    Useista täsmäävistä symboleista palautuu jokin satunnainen.
+    Useista täsmäävistä symboleista palautetaan
+    1. versiojärjestyksessä suurin kelvollinen versionumero; tai
+    2. aakkosjärjestyksessä suurin.
 
     Mikäli yhtään täsmäävää symbolia ei löydy, palautetaan None.
 
@@ -141,21 +144,22 @@ class Tietovarasto(
     # Mikäli löytyi yksi, palautetaan se.
     # Mikäli löytyi useampia, palautetaan versiojärjestyksessä suurin.
     # Löytynyt, tyhjä symboli korvataan `Nonella`.
+    def jarjestys(symboli):
+      try:
+        return (True, parse_version(symboli), symboli)
+      except InvalidVersion:
+        return (False, None, symboli)
     try:
-      symboli, *muut = symbolit
+      symboli, *__ = sorted(
+        symbolit,
+        key=jarjestys,
+        reverse=True,
+      )
     except ValueError:
       symboli = None
-    else:
-      if muut:
-        # Parsitaan symboli versionumeroksi vain tarvittaessa.
-        symboli = parse_version(symboli)
-        for muu_symboli in map(parse_version, muut):
-          if muu_symboli > symboli:
-            symboli = muu_symboli
-        symboli = str(symboli)
-        # if muut
-      symboli = symboli or None
-    self.symbolit[ref.binsha, tyyppi] = symboli
+    self.symbolit[ref.binsha, tyyppi] = symboli = (
+      None if symboli is None else str(symboli)
+    )
     return symboli
     # def symboli
 
