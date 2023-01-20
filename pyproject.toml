@@ -1,4 +1,4 @@
 [build-system]
 requires = ["GitPython", "setuptools>=42", "wheel"]
-build-backend = "setuptools_build_meta"
+build-backend = "_versiointi_setuptools_build_meta"
 backend-path = ["."]

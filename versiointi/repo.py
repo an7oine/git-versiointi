@@ -63,6 +63,8 @@ class Repo2_7_0(Repo):
     tyypit = tyyppi.split(' ') if tyyppi else ()
     if tyypit and '/' in tyypit[-1]:
       lauseke = tyypit[-1].rsplit('/', 1)[-1]
+    else:
+      lauseke = None
 
     return filter(
       re.compile(rf'.*/{lauseke}$').match if lauseke else None,
@@ -73,7 +75,10 @@ class Repo2_7_0(Repo):
         # Huomaa, että haara viittaa (nimeämismielessä) paitsi tällä het-
         # kellä osoittamaansa muutokseen, myös kaikkiin tämän edeltäjiin.
         # Leima taas viittaa pysyvästi täsmälleen yhteen muutokseen.
-        '--points-at' if tyyppi.startswith('refs/tags') else '--contains', ref,
+        '--points-at'
+        if tyyppi and tyyppi.startswith('refs/tags')
+        else '--contains',
+        ref,
 
         # Poimitaan alkuosa (viimeiseen kauttaviivaan saakka) kustakin
         # annetusta tyypistä.

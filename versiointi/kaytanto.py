@@ -57,7 +57,7 @@ class Versiomuotoilu:
     versio = eval(f"f'''{self.aihio}'''", kwargs)
     if self.indeksoitu:
       versio, indeksi = list(versio), []
-      while versio[-1].isdigit():
+      while versio and versio[-1].isdigit():
         indeksi[:0], versio[-1:] = versio[-1:], []
       return ''.join(versio), ''.join(indeksi)
     else:

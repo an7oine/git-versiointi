@@ -10,7 +10,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8'
 
 setup(
   name='git-versiointi',
-  version=_versionumero(__file__),
+  version=_versionumero(os.path.dirname(__file__)),
   description='Asennettavan pakettiversion haku git-leimojen mukaan',
   long_description=long_description,
   long_description_content_type='text/markdown',
@@ -19,6 +19,7 @@ setup(
   author_email='antti.hautaniemi@pispalanit.fi',
   licence='MIT',
   packages=find_packages(),
+  py_modules=['_versiointi_setuptools_build_meta'],
   entry_points={
     'distutils.setup_keywords': [
       'git_versiointi = versiointi:tarkista_git_versiointi',
