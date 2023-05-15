@@ -41,66 +41,114 @@ def asennustiedot(setup_py):
   # def asennustiedot
 
 
-def _versionumero(setup_py):
-  ''' Sisäinen käyttö: palauta pelkkä versionumero. '''
-  dist = Distribution()
-  try:
-    tarkista_git_versiointi(dist, 'git_versiointi', setup_py)
-    return dist.git_versiointi.versionumero(ref=dist.git_ref)
-  except:
-    return None
-  # def _versionumero
-
-
-def tarkista_git_versiointi(dist, attr, value):
-  ''' Hae Git-tietovarasto määritetyn setup.py-tiedoston polusta. '''
-  # pylint: disable=unused-argument, protected-access
+def _versiointi(setup_py):
+  ''' Muodosta versiointiolio setup.py-tiedoston sijainnin mukaan. '''
   from .versiointi import Versiointi
 
-  if isinstance(value, Versiointi):
-    # Hyväksytään aiemmin asetettu versiointiolio (tupla-ajo).
-    return
-  elif not isinstance(value, str):
-    raise DistutilsSetupError(
-      f'virheellinen parametri: {attr}={value!r}'
-    )
-
   # Poimi setup.py-tiedoston hakemisto.
-  polku = os.path.dirname(value)
+  polku = os.path.dirname(setup_py)
 
   # Lataa oletusparametrit `setup.cfg`-tiedostosta, jos on.
   parametrit = configparser.ConfigParser()
   parametrit.read(os.path.join(polku, 'setup.cfg'))
 
-  # Alusta versiointiolio ja aseta se jakelun tietoihin.
-  try:
-    dist.git_versiointi = Versiointi(
-      polku,
-      kaytanto=(
-        parametrit['versiointi']
-        if 'versiointi' in parametrit
-        else VERSIOKAYTANTO
-      )
+  # Palauta versiointiolio.
+  return Versiointi(
+    polku,
+    kaytanto=(
+      parametrit['versiointi']
+      if 'versiointi' in parametrit
+      else VERSIOKAYTANTO
     )
-  except ValueError:
-    raise DistutilsSetupError(
-      f'git-tietovarastoa ei löydy hakemistosta {polku!r}'
-    )
-    # except ValueError
+  )
+  # def _versiointi
 
+
+def _poimi_sdist_versio(setup_py):
+  ''' Poimi `sdist`-pakettiin tallennettu versionumero. '''
+  with open(os.path.join(
+    os.path.dirname(setup_py),
+    'PKG-INFO'
+  )) as pkg_info:
+    for rivi in pkg_info:
+      tulos = PKG_INFO_VERSIO.match(rivi)
+      if tulos:
+        return tulos.group(1)
+  return None
+  # def _poimi_sdist_versio
+
+
+def _versionumero(setup_py):
+  ''' Sisäinen käyttö: palauta pelkkä versionumero. '''
+  try:
+    dist = Distribution(attrs={'git_versiointi': setup_py})
+  except DistutilsSetupError:
+    return _poimi_sdist_versio(setup_py)
+  else:
+    return _versiointi(setup_py).versionumero(ref=dist.git_ref)
+  # def _versionumero
+
+
+def tarkista_git_versiointi(dist, attr, value):
+  '''
+  Sisääntulopiste setup-komentosarjalle silloin, kun parametri
+  `setup_requires='git-versiointi'` on määritetty.
+
+  Huomaa, että `attr` on aina `git_versiointi`. Arvo
+  `value` on git-jakelun juurihakemisto.
+
+  Versiointiolio muodostetaan git-tietojen perusteella ja
+  asetetaan `dist.git_versiointi`-määreeseen.
+  '''
+  # pylint: disable=unused-argument, protected-access
+  from .versiointi import Versiointi
+
+  if isinstance(value, Versiointi):
+    # Hyväksytään aiemmin asetettu versiointiolio (tupla-ajo).
+    dist.git_versiointi = value
+  elif not isinstance(value, str):
+    raise DistutilsSetupError(
+      f'virheellinen parametri: {attr}={value!r}'
+    )
+  else:
+    # Alusta versiointiolio ja aseta se jakelun tietoihin.
+    try:
+      dist.git_versiointi = _versiointi(value)
+    except ValueError:
+      raise DistutilsSetupError(
+        f'git-tietovarastoa ei löydy hakemistosta {value!r}'
+      )
+  return value
   # def tarkista_git_versiointi
 
 
 def finalize_distribution_options(dist):
+  '''
+  Viimeistelyfunktio jakelun tietojen asettamisen jälkeen.
+
+  – Puukotetaan setuptools-jakelun tyyppi, jotta voidaan käyttää
+  tämän paketin tarjoamia laajennettuja komentoriviparametrejä.
+  – Asetetaan paketin versionumero ja -historia git-tietovaraston
+    mukaisesti.
+  – Tallennetaan versiointiolio tiedostokohtaista versiointia varten.
+  – Viimekätisenä ratkaisuna (git-tietovarastoa ei löytynyt)
+    poimitaan pelkkä versionumero `sdist`-jakelun metatiedoista.
+  '''
   # pylint: disable=protected-access
+  from .versiointi import Versiointi
+
   if dist.version != 0:
     return
-  elif getattr(dist, 'git_versiointi', None) is not None:
+
+  asetettu_versiointi = getattr(dist, 'git_versiointi', None)
+  if isinstance(asetettu_versiointi, Versiointi):
     pass
   else:
     try:
-      tarkista_git_versiointi(dist, 'git_versiointi', sys.argv[0])
-    except (ModuleNotFoundError, DistutilsSetupError):
+      dist.git_versiointi = _versiointi(
+        asetettu_versiointi or sys.argv[0]
+      )
+    except:
       dist.git_versiointi = None
 
   # Aseta jakelun tyyppi; tarvitaan komentoriviparametrien lisäämiseksi.
@@ -117,15 +165,9 @@ def finalize_distribution_options(dist):
   else:
     # Yritetään hakea versiotieto `sdist`-tyyppisen paketin PKG-INFOsta.
     try:
-      with open(os.path.join(
-        os.path.dirname(sys.argv[0]),
-        'PKG-INFO'
-      )) as pkg_info:
-        for rivi in pkg_info:
-          tulos = PKG_INFO_VERSIO.match(rivi)
-          if tulos:
-            dist.metadata.version = tulos.group(1)
-            break
+      dist.metadata.version = _poimi_sdist_versio(
+        sys.argv[0],
+      )
     except FileNotFoundError:
       pass
     # else (dist.git_versiointi is None)

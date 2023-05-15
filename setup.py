@@ -10,7 +10,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8'
 
 setup(
   name='git-versiointi',
-  version=_versionumero(os.path.dirname(__file__)),
+  version=_versionumero(__file__),
   description='Asennettavan pakettiversion haku git-leimojen mukaan',
   long_description=long_description,
   long_description_content_type='text/markdown',
@@ -34,5 +34,5 @@ setup(
   classifiers=[
     'Programming Language :: Python :: 3',
   ],
-  install_requires=['GitPython', 'setuptools>=42'],
+  install_requires=['GitPython', 'setuptools>=63'],
 )
