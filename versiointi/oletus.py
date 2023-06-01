@@ -16,10 +16,8 @@ VERSIOKAYTANTO = {
   # Master-haara tai versiohaara (v-X.Y):
   # indeksoitu kehitysversio tai etäisyyden mukainen pääte.
   ' '.join((
-    'refs/heads/master',
-    'refs/remotes/origin/master',
-    'refs/heads/v-[0-9].*',
-    'refs/remotes/origin/v-[0-9].*',
+    'refs/heads/(master|v-[0-9].*)',
+    'refs/remotes/origin/(master|v-[0-9].*)',
   )): (
     '''{pohja}{int(indeksi)+etaisyys if indeksi else f'.{etaisyys}'}'''
   ),
