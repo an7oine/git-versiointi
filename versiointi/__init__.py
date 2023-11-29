@@ -2,6 +2,7 @@
 
 import configparser
 import functools
+import logging
 import os
 import re
 import sys
@@ -22,6 +23,11 @@ PKG_INFO_VERSIO = re.compile(r'Version\s*:\s*(.+)')
 _build_py.build_py = functools.wraps(_build_py.build_py, updated=())(
   type(_build_py.build_py)('build_py', (build_py, _build_py.build_py), {})
 )
+
+
+# Ohitetaan DEBUG-loki, sillä tämä sisältää mm. `git.cmd`-viestin jokaisesta
+# GitPythonin ajamasta git-komennosta (subprocess.Popen).
+logging.root.setLevel(logging.INFO)
 
 
 def asennustiedot(setup_py):
