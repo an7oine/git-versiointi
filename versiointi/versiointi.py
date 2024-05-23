@@ -4,7 +4,7 @@ import itertools
 import re
 import warnings
 
-import pkg_resources
+from packaging.version import parse, InvalidVersion
 
 from .repo import Tietovarasto
 
@@ -78,8 +78,8 @@ class Versiointi:
   @staticmethod
   def _normalisoi(versio):
     try:
-      return str(pkg_resources.packaging.version.Version(versio))
-    except pkg_resources.packaging.version.InvalidVersion:
+      return str(parse(versio))
+    except InvalidVersion:
       return versio
     # def _normalisoi
 

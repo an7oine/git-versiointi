@@ -3,7 +3,7 @@
 import itertools
 import re
 
-import pkg_resources
+from packaging.version import parse
 
 from git.objects.commit import Commit
 from git.objects.tag import TagObject
@@ -68,7 +68,7 @@ class Tietovarasto(Repo):
     try:
       return next(iter(sorted(
         versiot,
-        key=lambda x: pkg_resources.parse_version(str(x)),
+        key=lambda x: parse(str(x)),
         reverse=True,
       )))
     except StopIteration:
