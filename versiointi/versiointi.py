@@ -3,7 +3,7 @@
 import itertools
 import warnings
 
-from pkg_resources import parse_version
+from packaging.version import parse
 
 from .kaytanto import VersiointiMeta
 from .repo import Tietovarasto
@@ -116,7 +116,7 @@ class Versiointi:
     Returns:
       ref (str): git-viittaus
     '''
-    versio = str(parse_version(haettu_versio)) if haettu_versio else None
+    versio = str(parse(haettu_versio)) if haettu_versio else None
     for muutos in self.tietovarasto.muutokset(ref):
       if versio is None or self._versio(muutos) == versio:
         return muutos

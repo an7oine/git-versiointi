@@ -3,7 +3,7 @@
 import itertools
 import re
 
-import pkg_resources
+from packaging.version import parse, InvalidVersion
 
 
 class KaytantoMeta(type):
@@ -151,8 +151,8 @@ class VersiointiMeta(KaytantoMeta):
         '[^a-zA-Z0-9.]', '', s
       ) for s in versio.split('+', 1)))
       try:
-        return str(pkg_resources.packaging.version.Version(versio))
-      except pkg_resources.packaging.version.InvalidVersion:
+        return str(parse(versio))
+      except InvalidVersion:
         return versio
       # def versio
     attrs['_versio'] = versio

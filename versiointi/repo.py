@@ -3,8 +3,7 @@
 import itertools
 import re
 
-from pkg_resources import parse_version
-from pkg_resources.extern.packaging.version import InvalidVersion
+from packaging.version import parse, InvalidVersion
 
 from git.objects.commit import Commit
 from git.objects.tag import TagObject
@@ -151,7 +150,7 @@ class Tietovarasto(
     # Löytynyt, tyhjä symboli korvataan `Nonella`.
     def jarjestys(symboli):
       try:
-        return (True, parse_version(symboli), symboli)
+        return (True, parse(symboli), symboli)
       except InvalidVersion:
         return (False, None, symboli)
     try:

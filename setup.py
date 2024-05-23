@@ -34,5 +34,9 @@ setup(
   classifiers=[
     'Programming Language :: Python :: 3',
   ],
-  install_requires=['GitPython', 'setuptools>=63'],
+  install_requires=[
+    'GitPython',
+    'packaging',
+    'setuptools>=63',
+  ],
 )
