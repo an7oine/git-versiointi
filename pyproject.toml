@@ -1,4 +1,39 @@
 [build-system]
 requires = ["GitPython", "packaging", "setuptools>=63", "wheel"]
-build-backend = "_versiointi_setuptools_build_meta"
+build-backend = "_versiointi_meta"
 backend-path = ["."]
+
+[project]
+name = "git-versiointi"
+description = "Git-tietovarastoon perustuva versionumeroinnin hallinta"
+readme = "README.md"
+authors = [
+  {name = "Antti Hautaniemi", email = "antti.hautaniemi@me.com"},
+]
+license = {file = "Oikeudet.txt"}
+requires-python = ">= 3.8"
+dynamic = ["version"]
+dependencies = [
+  "GitPython",
+  "packaging",
+  "setuptools>=63",
+]
+classifiers=[
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Version Control",
+]
+
+[project.urls]
+Homepage = "https://github.com/an7oine/git-versiointi.git"
+
+[tool.setuptools.dynamic]
+version = {attr = "_versiointi_meta.versio"}
+
+[project.entry-points."distutils.setup_keywords"]
+git_versiointi = "versiointi:tarkista_git_versiointi"
+
+[project.entry-points."egg_info.writers"]
+"historia.json" = "versiointi.egg_info:kirjoita_json"
+
+[project.entry-points."setuptools.finalize_distribution_options"]
+versiointi = "versiointi:finalize_distribution_options"

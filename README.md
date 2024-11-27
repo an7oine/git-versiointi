@@ -1,32 +1,50 @@
 git-versiointi
 ==============
 
-Työkalupaketti pakettiversion ja -historian sekä vaadittavien riippuvuuksien
-automaattiseen määrittämiseen.
+Työkalupaketti pakettiversion ja -historian automaattiseen määrittämiseen.
 
 # Asennus
 
 Asennusta järjestelmään ei tarvita työasemalla eikä palvelimella.
 
-Työkalut otetaan sen sijaan käyttöön kunkin halutun pip-asennettavan git-projektin osalta muokkaamalla vastaavaa `setup.py`-tiedostoa seuraavasti:
+Työkalut otetaan käyttöön kunkin projektin osalta seuraavasti:
+
+## pyproject.toml (PEP 517)
+```toml
+[build-system]
+requires = ["git-versiointi", "setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["version"]
+```
+
+## setup.py (tarvittaessa)
 ```python
+from setuptools import setup
 ...
 setup(
   ...
-  setup_requires=['git-versiointi'], # <-- LISÄTÄÄN
+  setup_requires='git-versiointi',
   ...
   # version=...                        <-- POISTETAAN
   ...
 )
 ```
-Lisäksi voidaan tarvittaessa antaa parametrin `git_versiointi` arvoksi `setup.py`-tiedoston sijainti; oletuksena tämä on `sys.argv[0]`.
 
-Kun pakettia asennetaan joko työasemalla (`python setup.py develop`) tai palvelimella (`pip install ...`), tekee järjestelmä `setup.py`-tiedoston suorittamisen yhteydessä automaattisesti seuraavaa:
+Huomaa, että edellä kuvattu minimaalinen `setup.py` tarvitaan myös PEP 517 -pohjaisessa projektissa komentorivikutsujen (ks. jäljempänä) suorittamiseksi.
+
+## Vaikutukset
+
+Kun paketti asennetaan joko työasemalla (`python setup.py develop`) tai palvelimella (`pip install ...`), tekee järjestelmä asennuksen yhteydessä automaattisesti seuraavaa:
 * asentaa `git-versiointi`-paketin, ellei sitä löydy jo valmiiksi järjestelmästä
 * suorittaa normaalin asennuksen muodostaen versionumeron yms. tiedot automaattisesti (ks. kuvaus jäljempänä)
 * poistaa asennuksen ajaksi asennetun `git-versiointi`-paketin
 
-# Versionumeron tutkiminen
+
+# Komentorivi
+
+## Versionumeron tutkiminen
 
 Git-versiointia käyttävän paketin versionumero voidaan poimia komentoriviltä seuraavasti:
 ```bash
@@ -34,6 +52,7 @@ python <paketti>/setup.py --version [--ref XXX]
 ```
 
 Python-kutsulle voidaan antaa parametri `--ref XXX`, missä `XXX` on git-muutoksen tiiviste, haaran tai leiman nimi tms. Tällöin palautetaan versionumero kyseisen muutoksen kohdalla. Mikäli paketin (ali-) versiointikäytäntö on muuttunut annetun revision ja nykyisen tilanteen (`HEAD`) välillä, saattaa ilmoitettu versionumero poiketa historiallisesta, kyseisellä hetkellä silloisen käytännön mukaisesti lasketusta.
+
 
 # Toimintaperiaate
 
@@ -67,6 +86,7 @@ Kaikki oletusarvoiset tai räätälöidyn logiikan mukaan muodostetut versionume
 Paketin tietoihin lisättävä `historia` kirjoitetaan asennetun paketin metatietoihin (`EGG-INFO`) tiedostoon `historia.json`.
 
 Paketin omissa asennustiedoissa määritetty tietue `entry_points[egg_info.writers]` asettaa kirjoituskomennon tiedostolle `historia.json`
+
 
 # Räätälöity versiointikäytäntö
 

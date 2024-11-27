@@ -3,7 +3,7 @@
 import configparser
 import functools
 import logging
-import os
+from pathlib import Path
 import re
 import sys
 
@@ -13,7 +13,6 @@ from setuptools.command import build_py as _build_py
 from .oletus import VERSIOKAYTANTO
 from .parametrit import Distribution
 from .tiedostot import build_py
-from .vaatimukset import asennusvaatimukset
 
 
 PKG_INFO_VERSIO = re.compile(r'Version\s*:\s*(.+)')
@@ -31,36 +30,17 @@ _build_py.build_py = functools.wraps(_build_py.build_py, updated=())(
 logging.root.setLevel(logging.INFO)
 
 
-def asennustiedot(setup_py):
-  ''' Vanha käyttötapa: `install_requires`-parametri. '''
-  import warnings
-  from setuptools import SetuptoolsDeprecationWarning
-  warnings.warn(
-    'asennustiedot()-mekanismi on vanhentunut.',
-    SetuptoolsDeprecationWarning,
-    stacklevel=2,
-  )
-  requirements = asennusvaatimukset(setup_py)
-  return {
-    **({'install_requires': requirements} if requirements else {})
-  }
-  # def asennustiedot
-
-
-def _versiointi(setup_py):
-  ''' Muodosta versiointiolio setup.py-tiedoston sijainnin mukaan. '''
+def _versiointi(hakemisto: Path):
+  ''' Muodosta versiointiolio annetun hakemiston mukaan. '''
   from .versiointi import Versiointi
-
-  # Poimi setup.py-tiedoston hakemisto.
-  polku = os.path.dirname(setup_py)
 
   # Lataa oletusparametrit `setup.cfg`-tiedostosta, jos on.
   parametrit = configparser.ConfigParser()
-  parametrit.read(os.path.join(polku, 'setup.cfg'))
+  parametrit.read(hakemisto / 'setup.cfg')
 
   # Palauta versiointiolio.
   return Versiointi(
-    polku,
+    hakemisto,
     kaytanto=(
       parametrit['versiointi']
       if 'versiointi' in parametrit
@@ -70,12 +50,9 @@ def _versiointi(setup_py):
   # def _versiointi
 
 
-def _poimi_sdist_versio(setup_py):
+def _poimi_sdist_versio(hakemisto: Path):
   ''' Poimi `sdist`-pakettiin tallennettu versionumero. '''
-  with open(os.path.join(
-    os.path.dirname(setup_py),
-    'PKG-INFO'
-  )) as pkg_info:
+  with open(hakemisto / 'PKG-INFO') as pkg_info:
     for rivi in pkg_info:
       tulos = PKG_INFO_VERSIO.match(rivi)
       if tulos:
@@ -84,21 +61,26 @@ def _poimi_sdist_versio(setup_py):
   # def _poimi_sdist_versio
 
 
-def _versionumero(setup_py):
+def _versionumero(tiedosto: str):
   ''' Sisäinen käyttö: palauta pelkkä versionumero. '''
+  hakemisto: Path = Path(tiedosto).parent
   try:
-    dist = Distribution(attrs={'git_versiointi': setup_py})
+    dist = Distribution(attrs={'git_versiointi': hakemisto})
   except DistutilsSetupError:
-    return _poimi_sdist_versio(setup_py)
+    pass
   else:
-    return _versiointi(setup_py).versionumero(ref=dist.git_ref)
+    try:
+      return _versiointi(hakemisto).versionumero(ref=dist.git_ref)
+    except ValueError:
+      pass
+
+  return _poimi_sdist_versio(hakemisto)
   # def _versionumero
 
 
 def tarkista_git_versiointi(dist, attr, value):
   '''
-  Sisääntulopiste setup-komentosarjalle silloin, kun parametri
-  `setup_requires='git-versiointi'` on määritetty.
+  Lue sisään (automaattisesti asetettu) parametri setup(git_versiointi=...).
 
   Huomaa, että `attr` on aina `git_versiointi`. Arvo
   `value` on git-jakelun juurihakemisto.
@@ -112,18 +94,20 @@ def tarkista_git_versiointi(dist, attr, value):
   if isinstance(value, Versiointi):
     # Hyväksytään aiemmin asetettu versiointiolio (tupla-ajo).
     dist.git_versiointi = value
-  elif not isinstance(value, str):
+    return value
+  elif isinstance(value, str):
+    value = Path(value)
+  elif not isinstance(value, Path):
     raise DistutilsSetupError(
       f'virheellinen parametri: {attr}={value!r}'
     )
-  else:
-    # Alusta versiointiolio ja aseta se jakelun tietoihin.
-    try:
-      dist.git_versiointi = _versiointi(value)
-    except ValueError:
-      raise DistutilsSetupError(
-        f'git-tietovarastoa ei löydy hakemistosta {value!r}'
-      )
+  # Alusta versiointiolio ja aseta se jakelun tietoihin.
+  try:
+    dist.git_versiointi = _versiointi(value)
+  except ValueError:
+    raise DistutilsSetupError(
+      f'git-tietovarastoa ei löydy hakemistosta {value!r}'
+    )
   return value
   # def tarkista_git_versiointi
 
@@ -146,14 +130,21 @@ def finalize_distribution_options(dist):
   if dist.version != 0:
     return
 
-  asetettu_versiointi = getattr(dist, 'git_versiointi', None)
-  if isinstance(asetettu_versiointi, Versiointi):
-    pass
-  else:
+  # Haetaan asennettavan paketin oma sijainti.
+  # Kutsuttaessa `setup.py`-tiedostoa suoraan tämä on `sys.argv[0]` ja
+  # paketin sijainti sen isäntähakemisto.
+  # Muutoin (pyproject.toml, esim. `python -m build`) käytetään nykyistä
+  # työhakemistoa, joka osoittaa PEP 517:n mukaan paketin lähdekoodiin.
+  paketti = (
+    setup_py.parent
+    if sys.argv and (setup_py := Path(sys.argv[0])).name == 'setup.py'
+    else Path.cwd()
+  )
+  asetettu_versiointi = getattr(dist, 'git_versiointi', None) or paketti
+
+  if not isinstance(asetettu_versiointi, Versiointi):
     try:
-      dist.git_versiointi = _versiointi(
-        asetettu_versiointi or sys.argv[0]
-      )
+      dist.git_versiointi = _versiointi(asetettu_versiointi)
     except:
       dist.git_versiointi = None
 
@@ -170,10 +161,9 @@ def finalize_distribution_options(dist):
 
   else:
     # Yritetään hakea versiotieto `sdist`-tyyppisen paketin PKG-INFOsta.
+    assert isinstance(asetettu_versiointi, Path)
     try:
-      dist.metadata.version = _poimi_sdist_versio(
-        sys.argv[0],
-      )
+      dist.metadata.version = _poimi_sdist_versio(asetettu_versiointi)
     except FileNotFoundError:
       pass
     # else (dist.git_versiointi is None)
