@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import configparser
 import functools
 import logging
 from pathlib import Path
@@ -10,7 +9,7 @@ import sys
 from distutils.errors import DistutilsSetupError
 from setuptools.command import build_py as _build_py
 
-from .oletus import VERSIOKAYTANTO
+from .asetukset import versiokaytanto
 from .parametrit import Distribution
 from .tiedostot import build_py
 
@@ -33,19 +32,9 @@ logging.root.setLevel(logging.INFO)
 def _versiointi(hakemisto: Path):
   ''' Muodosta versiointiolio annetun hakemiston mukaan. '''
   from .versiointi import Versiointi
-
-  # Lataa oletusparametrit `setup.cfg`-tiedostosta, jos on.
-  parametrit = configparser.ConfigParser()
-  parametrit.read(hakemisto / 'setup.cfg')
-
-  # Palauta versiointiolio.
   return Versiointi(
     hakemisto,
-    kaytanto=(
-      parametrit['versiointi']
-      if 'versiointi' in parametrit
-      else VERSIOKAYTANTO
-    )
+    kaytanto=versiokaytanto(hakemisto)
   )
   # def _versiointi
 

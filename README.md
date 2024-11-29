@@ -90,7 +90,9 @@ Paketin omissa asennustiedoissa määritetty tietue `entry_points[egg_info.write
 
 # Räätälöity versiointikäytäntö
 
-Määritystiedostossa setup.cfg voidaan asettaa haluttu versiointikäytäntö. Kukin määrityksen rivi vastaa tietyntyyppistä git-viittausta (leima, haara tai paljas revisio) sekä versionumeroa, joka tämäntyyppiselle viittaukselle asetetaan.
+Projektimäärityksessä (pyproject.toml) voidaan luoda taulu `tool.versiointi` versiointikäytännön mukauttamiseen tarpeen mukaan. Avaimella `kaytanto` voidaan asettaa taulukkomuotoinen (järjestetty sanakirja) muunnos kustakin git-revisiosta (leima, haara tai paljas tiiviste) tai tällaisten joukosta vastaavaan versionumeroon.
+
+Vastaava käytäntö voidaan asettaa myös erillisessä asetustiedostossa `setup.cfg`.
 
 Kunkin rivin avainosa tulkitaan (yhtenä tai useampana, välilyönnein erotettuna) säännöllisenä lausekkeena, joka täsmää (pitkään) git-viittaukseen: refs/.../...
 
@@ -109,33 +111,39 @@ Kunkin käytännön arvo-osa tulkitaan python-`f`-merkkijonona (PEP 498), johon 
   (tällöin indeksi poimitaan versionumeron viimeisten numeroiden mukaan, oletus 0)
 
 Oletuksena käytetään versiointikäytäntöä, joka vastaa seuraavaa määritystä:
-```ini
-[versiointi]
+```toml
+# pyproject.toml
 
-# Irtoversio: lisätään `+etäisyys`.
-*: {pohja}+{etaisyys}
+[tool.versiointi]
+kaytanto = [
+  # Irtoversio: lisätään `+etäisyys`.
+  ["*", "{pohja}+{etaisyys}"],
 
-# Mikä tahansa haara: lisätään `+haara.etäisyys`.
-refs/heads/ refs/remotes/origin/:
-  {pohja}{int(indeksi)+etaisyys if indeksi else f'+{tunnus}.{etaisyys}'}
+  # Mikä tahansa haara: lisätään `+haara.etäisyys`.
+  [
+    "refs/heads/ refs/remotes/origin/",
+    "{pohja}{int(indeksi)+etaisyys if indeksi else f'+{tunnus}.{etaisyys}'}"
+  ],
 
-# v- -alkuinen haara: tulkitaan kuten `master`.
-refs/heads/v-[0-9].* refs/remotes/origin/v-[0-9].*:
-  {pohja}{int(indeksi)+etaisyys if indeksi else f'.{etaisyys}'}
+  # v- -alkuinen haara: tulkitaan kuten `master`.
+  [
+    "refs/heads/v-[0-9].* refs/remotes/origin/v-[0-9].*",
+    "{pohja}{int(indeksi)+etaisyys if indeksi else f'.{etaisyys}'}"
+  ],
 
-# master-haara: lisätään pohjaversion indeksiä tai lisätään `.etäisyys`.
-refs/heads/master refs/remotes/origin/master:
-  {pohja}{int(indeksi)+etaisyys if indeksi else f'.{etaisyys}'}
+  # master-haara: lisätään pohjaversion indeksiä tai lisätään `.etäisyys`.
+  [
+    "refs/heads/master refs/remotes/origin/master",
+    "{pohja}{int(indeksi)+etaisyys if indeksi else f'.{etaisyys}'}"
+  ],
 
-# Leimattu kehitysversio (v*{a,b,c,dev}*): poimitaan tunnus, indeksoidaan.
-refs/tags/v[0-9].*:
-  {tunnus}{indeksoitu}
+  # Leimattu kehitysversio (v*{a,b,c,dev}*): poimitaan tunnus, indeksoidaan.
+  ["refs/tags/v[0-9].*", "{tunnus}{indeksoitu}"],
 
-# Leimattu tuotantoversio: poimitaan tunnus sellaisenaan.
-refs/tags/v[0-9][0-9.]*?(?![a-z]+[0-9]*):
-  {tunnus}
+  # Leimattu tuotantoversio: poimitaan tunnus sellaisenaan.
+  ["refs/tags/v[0-9][0-9.]*?(?![a-z]+[0-9]*)", "{tunnus}"],
 
-# Historian alku: 0.0.
-0:
-  0.0
+  # Historian alku: 0.0.
+  ["0", "0.0"],
+]
 ```

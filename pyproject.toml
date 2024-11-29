@@ -17,6 +17,7 @@ dependencies = [
   "GitPython",
   "packaging",
   "setuptools>=63",
+  'tomli>=1; python_version < "3.11"',
 ]
 classifiers=[
   "Programming Language :: Python :: 3",
