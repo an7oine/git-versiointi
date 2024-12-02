@@ -1,5 +1,12 @@
 [build-system]
-requires = ["GitPython", "packaging", "setuptools>=63", "wheel"]
+requires = [
+  "GitPython",
+  "packaging",
+  "setuptools>=63",
+  'setuptools>=66.1; python_version > "3.11"',
+  'tomli>=1; python_version < "3.11"',
+  "wheel",
+]
 build-backend = "_versiointi_meta"
 backend-path = ["."]
 
@@ -17,18 +24,15 @@ dependencies = [
   "GitPython",
   "packaging",
   "setuptools>=63",
+  'setuptools>=66.1; python_version > "3.11"',
   'tomli>=1; python_version < "3.11"',
+  "wheel",
 ]
-classifiers=[
+classifiers = [
   "Programming Language :: Python :: 3",
   "Topic :: Software Development :: Version Control",
 ]
-
-[project.urls]
-Homepage = "https://github.com/an7oine/git-versiointi.git"
-
-[tool.setuptools.dynamic]
-version = {attr = "_versiointi_meta.versio"}
+urls = {Homepage = "https://github.com/an7oine/git-versiointi.git"}
 
 [project.entry-points."distutils.setup_keywords"]
 git_versiointi = "versiointi:tarkista_git_versiointi"
@@ -38,3 +42,9 @@ git_versiointi = "versiointi:tarkista_git_versiointi"
 
 [project.entry-points."setuptools.finalize_distribution_options"]
 versiointi = "versiointi:finalize_distribution_options"
+
+[tool.setuptools.dynamic]
+version = {attr = "_versiointi_meta.versio"}
+
+[tool.setuptools.packages.find]
+exclude = ["testit"]

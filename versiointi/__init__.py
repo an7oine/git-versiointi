@@ -6,6 +6,9 @@ from pathlib import Path
 import re
 import sys
 
+if sys.version_info >= (3, 12):
+  import setuptools.dist
+
 from distutils.errors import DistutilsSetupError
 from setuptools.command import build_py as _build_py
 
