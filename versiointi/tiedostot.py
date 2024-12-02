@@ -49,9 +49,30 @@ def tiedostoversiot(versiointi, tiedosto):
   # def tiedostoversiot
 
 
-class build_py:
-  # pylint: disable=invalid-name, no-member
+class Versioitu:
   git_versiointi = None
+
+  def _kopioi_moduulin_versiot(self, lahde, kohde):
+    for versionumero, tiedostosisalto in tiedostoversiot(
+      self.git_versiointi, lahde
+    ):
+      # Muodosta tulostiedoston nimi.
+      outfile = f'-{versionumero}'.join(os.path.splitext(kohde))
+
+      # Kirjoita sisältö tulostiedostoon ja tuota sen nimi.
+      with open(outfile, 'wb') as tiedosto:
+        tiedosto.write(tiedostosisalto)
+        yield outfile
+        # with open as tiedosto
+      # for versionumero, tiedostosisalto in tiedostoversiot
+    # def _kopioi_moduulin_versiot
+
+  # class Versioitu
+
+
+class build_py(Versioitu):
+  # pylint: disable=function-redefined, invalid-name, no-member
+
   def build_module(self, module, module_file, package):
     # Asenna tiedosto normaalisti.
     oletustulos = super().build_module(module, module_file, package)
@@ -64,21 +85,52 @@ class build_py:
 
     # Tallenna tiedoston versio kunkin muutoksen kohdalla;
     # lisää tiedostonimeen vastaava versionumero.
-    for versionumero, tiedostosisalto in tiedostoversiot(
-      self.git_versiointi, module_file
+    for versioitu_tiedosto in self._kopioi_moduulin_versiot(
+      module_file,
+      self.get_module_outfile(self.build_lib, package, module),
     ):
-      # Muodosta tulostiedoston nimi.
-      outfile = self.get_module_outfile(self.build_lib, package, module)
-      outfile = f'-{versionumero}'.join(os.path.splitext(outfile))
-
-      # Kirjoita sisältö tulostiedostoon, tee muistiinpano.
-      with open(outfile, 'wb') as tiedosto:
-        tiedosto.write(tiedostosisalto)
-      self._build_py__updated_files.append(outfile)
-
-      # for versionumero, tiedostosisalto in tiedostoversiot
+      # Setuptools < 75.6.0.
+      try:
+        bpuf = self._build_py__updated_files
+      except AttributeError:
+        pass
+      else:
+        bpuf.append(versioitu_tiedosto)
+        # else
+      # for versioitu_tiedosto in self._kopioi_moduulin_versiot
 
     # Palautetaan kuten oletus.
     return oletustulos
     # def build_module
   # class build_py
+
+
+class sdist(Versioitu):
+  # pylint: disable=no-member
+
+  def copy_file(
+    self,
+    infile,
+    outfile,
+    preserve_mode=1,
+    preserve_times=1,
+    link=None,
+    level=1
+  ):
+    ''' Kopioi alkuperäisen lisäksi mahdolliset versioidut moduulit. '''
+    tulos = super().copy_file(
+      infile,
+      outfile,
+      preserve_mode=preserve_mode,
+      preserve_times=preserve_times,
+      link=link,
+      level=level
+    )
+    list(self._kopioi_moduulin_versiot(
+      infile,
+      outfile
+    ))
+    return tulos
+    # def copy_file
+
+  # class sdist

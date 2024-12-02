@@ -1,30 +1,23 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name, deprecated-module, wrong-import-position
 
-import functools
 import logging
 from pathlib import Path
 import re
 import sys
 
 if sys.version_info >= (3, 12):
+  # Tarvitaan, jotta `import distutils` toimii.
   import setuptools.dist
 
 from distutils.errors import DistutilsSetupError
-from setuptools.command import build_py as _build_py
 
 from .asetukset import versiokaytanto
 from .parametrit import Distribution
-from .tiedostot import build_py
+from .tiedostot import build_py, sdist
 
 
 PKG_INFO_VERSIO = re.compile(r'Version\s*:\s*(.+)')
-
-
-# Puukota `build_py`-komento huomioimaan tiedostokohtaiset
-# versiointimääritykset.
-_build_py.build_py = functools.wraps(_build_py.build_py, updated=())(
-  type(_build_py.build_py)('build_py', (build_py, _build_py.build_py), {})
-)
 
 
 # Ohitetaan DEBUG-loki, sillä tämä sisältää mm. `git.cmd`-viestin jokaisesta
@@ -96,10 +89,10 @@ def tarkista_git_versiointi(dist, attr, value):
   # Alusta versiointiolio ja aseta se jakelun tietoihin.
   try:
     dist.git_versiointi = _versiointi(value)
-  except ValueError:
+  except ValueError as exc:
     raise DistutilsSetupError(
       f'git-tietovarastoa ei löydy hakemistosta {value!r}'
-    )
+    ) from exc
   return value
   # def tarkista_git_versiointi
 
@@ -137,7 +130,7 @@ def finalize_distribution_options(dist):
   if not isinstance(asetettu_versiointi, Versiointi):
     try:
       dist.git_versiointi = _versiointi(asetettu_versiointi)
-    except:
+    except Exception:
       dist.git_versiointi = None
 
   # Aseta jakelun tyyppi; tarvitaan komentoriviparametrien lisäämiseksi.
@@ -148,8 +141,29 @@ def finalize_distribution_options(dist):
     dist.metadata.version = dist.git_versiointi.versionumero(ref=dist.git_ref)
     dist.historia = dist.git_versiointi.historia(ref=dist.git_ref)
 
-    # Aseta versiointi tiedostokohtaisen versioinnin määreeksi.
-    _build_py.build_py.git_versiointi = dist.git_versiointi
+    # Puukotetaan `setuptools`-asennuskomentoja tarvittaessa
+    # siten, että tiedostokohtaiset versioinnit huomioidaan
+    # `sdist`-pakettia muodostettaessa.
+
+    # Setup.py-pohjainen asennus: komento `build_py`.
+    if not (o_build_py := dist.cmdclass.get('build_py')):
+      from setuptools.command.build_py import build_py as o_build_py
+    if not issubclass(o_build_py, build_py):
+      class _build_py(build_py, o_build_py):
+        git_versiointi = dist.git_versiointi
+      dist.cmdclass['build_py'] = _build_py
+      # elif not issubclass
+
+    # PEP 517 -pohjainen asennus: komento `sdist`.
+    if not (o_sdist := dist.cmdclass.get('sdist')):
+      from setuptools.command.sdist import sdist as o_sdist
+    if not issubclass(o_sdist, sdist):
+      class _sdist(sdist, o_sdist):
+        git_versiointi = dist.git_versiointi
+      dist.cmdclass['sdist'] = _sdist
+      # elif not issubclass
+
+    # if dist.git_versiointi is not None
 
   else:
     # Yritetään hakea versiotieto `sdist`-tyyppisen paketin PKG-INFOsta.
