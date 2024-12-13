@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=protected-access
 
+import itertools
 import os
 import re
 
@@ -21,12 +22,12 @@ def tiedostoversiot(versiointi, tiedosto):
   Yields:
     (versionumero, tiedostosisältö)
   '''
-  # Tutki, sisältääkö tiedostosisältö versiointimäärityksen.
+  # Tutki, sisältyykö versiointimääritys ensimmäisiin 10 riviin.
   with open(os.path.join(
     versiointi.tietovarasto.working_tree_dir,
     tiedosto
   ), 'r') as tiedostosisalto:
-    for rivi in tiedostosisalto:
+    for rivi in itertools.islice(tiedostosisalto, 10):
       tiedoston_versiointi = VERSIOINTI.match(rivi)
       if tiedoston_versiointi:
         alkaen = tiedoston_versiointi[2]
