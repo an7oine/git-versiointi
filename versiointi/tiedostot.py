@@ -27,13 +27,17 @@ def tiedostoversiot(versiointi, tiedosto):
     versiointi.tietovarasto.working_tree_dir,
     tiedosto
   ), 'r') as tiedostosisalto:
-    for rivi in itertools.islice(tiedostosisalto, 10):
-      tiedoston_versiointi = VERSIOINTI.match(rivi)
-      if tiedoston_versiointi:
-        alkaen = tiedoston_versiointi[2]
-        break
-    else:
-      # Ellei, poistutaan nopeasti.
+    try:
+      for rivi in itertools.islice(tiedostosisalto, 10):
+        tiedoston_versiointi = VERSIOINTI.match(rivi)
+        if tiedoston_versiointi:
+          alkaen = tiedoston_versiointi[2]
+          break
+      else:
+        # Ellei, poistutaan nopeasti.
+        return
+    except UnicodeDecodeError:
+      # Mikäli tiedostosisältöä ei pystytä tulkitsemaan, poistutaan.
       return
     # with tiedostosisalto
 
@@ -126,10 +130,11 @@ class sdist(Versioitu):
       link=link,
       level=level
     )
-    list(self._kopioi_moduulin_versiot(
-      infile,
-      outfile
-    ))
+    if infile.endswith('.py'):
+      list(self._kopioi_moduulin_versiot(
+        infile,
+        outfile
+      ))
     return tulos
     # def copy_file
 
