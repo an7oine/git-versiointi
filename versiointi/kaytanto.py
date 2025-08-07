@@ -45,8 +45,10 @@ class Kaytanto(metaclass=KaytantoMeta):
 
 
 class Versiomuotoilu:
+
   def __init__(self, aihio):
     self.aihio = aihio
+
   def __call__(self, **kwargs):
     self.indeksoitu = False
     class MerkitseIndeksointi:
@@ -63,6 +65,10 @@ class Versiomuotoilu:
     else:
       return versio, ''
     # def __call__
+
+  def __repr__(self):
+    return f'<Versiomuotoilu: {self.aihio!r}>'
+
   # class Versiomuotoilu
 
 
