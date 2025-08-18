@@ -1,11 +1,15 @@
 # pylint: disable=line-too-long
 
+# Huomaa, että `git for-each-ref` ottaa parametrinä `glob(7)`-
+# tyyppisen kuvion, ei säännöllistä lauseketta. Tässä määritellystä
+# säännöllisestä lausekkeesta annetaan viimeistä vinoviivaa
+# edeltävä osa parametrinä em. git-komennolle.
 REF = {
   '@irto': r'*',
-  '@haara': r'refs/heads/ refs/remotes/.*/',
+  '@haara': r'refs/heads/ refs/remotes/origin/',
   '@master_tai_vx': ' '.join((
     r'refs/heads/(master|v-[0-9].*)',
-    r'refs/remotes/.*/(master|v-[0-9].*)',
+    r'refs/remotes/origin/(master|v-[0-9].*)',
   )),
   '@leima_kehitys': r'refs/tags/v[0-9].*',
   '@leima': r'refs/tags/v[0-9][0-9.]*?(?![a-z]+[0-9]*)',
