@@ -20,17 +20,17 @@ REF = {
 KAYTANTO = {
   # Irtoversio (nk. detached HEAD): lisätään etäisyys.
   '@seuraava_etaisyys': (
-    '''{pohja}{int(indeksi)+1 if indeksi else ".1"}.dev+{etaisyys}'''
+    '''{pohja}{int(indeksi)+1 if indeksi else ".1"}.dev{etaisyys}'''
   ),
 
   # (Muun kuin master-) haaran versio:
-  # - <+1 tai .1>.dev+<etaisyys>.<haara>
+  # - <+1 tai .1>.dev<etaisyys>+<haara>
   '@seuraava_etaisyys_tunnus': (
-    '''{pohja}{int(indeksi)+1 if indeksi else ".1"}.dev+{etaisyys}.{tunnus}'''
+    '''{pohja}{int(indeksi)+1 if indeksi else ".1"}.dev{etaisyys}+{tunnus}'''
   ),
-  # - indeksoitu kehitysversio tai .1.dev+<etaisyys>.<haara>
+  # - indeksoitu kehitysversio tai .1.dev<etaisyys>+<haara>
   '@kehitys_tai_etaisyys_tunnus': (
-    '''{pohja}{int(indeksi)+etaisyys if indeksi else f'.1.dev+{etaisyys}.{tunnus}'}'''
+    '''{pohja}{int(indeksi)+etaisyys if indeksi else f'.1.dev{etaisyys}+{tunnus}'}'''
   ),
 
   # Master-haara tai versiohaara (v-X.Y):
@@ -58,7 +58,7 @@ KAYTANTO = {
 
 VERSIOKAYTANTO = {
   # Vakiokäytäntö: numerointi seuraa <master>- tai vX-tyyppistä haaraa,
-  # muut haarat erotetaan <+1>.dev -tunnuksella ja nimetään (+<etaisyys>.<nimi>).
+  # muut haarat erotetaan <+1>.dev -tunnuksella ja nimetään (<etaisyys>+<nimi>).
   'oletus': (oletus := {
     REF['@irto']: KAYTANTO['@seuraava_etaisyys'],
     REF['@haara']: KAYTANTO['@seuraava_etaisyys_tunnus'],

@@ -67,7 +67,7 @@ class Versiomuotoilu:
     # def __call__
 
   def __repr__(self):
-    return f'<Versiomuotoilu: {self.aihio!r}>'
+    return f'<Versiomuotoilu({self.aihio!r})>'
 
   # class Versiomuotoilu
 
